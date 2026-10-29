@@ -2,6 +2,11 @@
 
 **Scope:** IEEE SP Cup 2027 C3 — tracking one designated face among bystanders. This is a dataset acquisition/preparation guide, not evidence of benchmark performance.
 
+For executable video-aligned AVA preparation, leakage-separated inference/evaluation,
+MOT/C3 metrics, oracle experiments and Windows commands, see
+[BENCHMARK_GUIDE.md](BENCHMARK_GUIDE.md). The older preparation script below produces
+metadata only; the benchmark uses a stricter common schema with source frame indices.
+
 ## Recommended sources and limitations
 
 | Dataset | Official source | Useful annotations | C3 use | Availability / caution |
