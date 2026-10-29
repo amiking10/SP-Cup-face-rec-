@@ -40,8 +40,23 @@ def test_invalid_cli(args):
         parser().parse_args(args)
 
 
+@pytest.mark.parametrize('value', ['0', '-1', 'nan', 'inf'])
+def test_invalid_timed_memory(value):
+    with pytest.raises(SystemExit):
+        parser().parse_args(['--source', 'webcam', '--track-memory-seconds', value])
+
+
 def test_corrupt_video(tmp_path):
     path = tmp_path / 'bad.mp4'
     path.write_text('not video')
     with pytest.raises(RuntimeError, match='Cannot open input'):
         open_capture(parser().parse_args(['--source', 'video', '--input', str(path)]))
+
+
+def test_raw_recording_requires_record_before_camera_opens(monkeypatch, capsys):
+    from c3_tracker import app
+    def camera_must_not_open(args):
+        raise AssertionError('invalid recording options must not open the camera')
+    monkeypatch.setattr(app, 'open_capture', camera_must_not_open)
+    assert app.main(['--source', 'webcam', '--record-raw']) == 1
+    assert '--record-raw requires --record' in capsys.readouterr().err

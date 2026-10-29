@@ -11,6 +11,7 @@ from .tracking import FaceTracker
 from .target_manager import TargetManager
 from .visualization import annotate
 from .logging_utils import RunLogger
+from .controls import Controls
 
 WINDOW = "C3 face tracking"
 
@@ -29,6 +30,13 @@ def probability(value):
     return number
 
 
+def positive_seconds(value):
+    number = float(value)
+    if not math.isfinite(number) or number <= 0:
+        raise argparse.ArgumentTypeError("must be a finite positive number of seconds")
+    return number
+
+
 def parser():
     p = argparse.ArgumentParser(description="MediaPipe + DeepSORT C3 baseline")
     p.add_argument("--source", choices=("webcam", "video"), required=True)
@@ -36,15 +44,24 @@ def parser():
     p.add_argument("--input", type=Path)
     p.add_argument("--width", type=positive, default=640)
     p.add_argument("--height", type=positive, default=480)
-    p.add_argument("--confidence", type=probability, default=0.5)
-    p.add_argument("--max-age", type=positive, default=30)
+    p.add_argument("--confidence", type=probability, default=0.65)
+    p.add_argument("--max-age", type=positive, default=None,
+                   help="override timed track memory with a limit in unmatched frames")
+    p.add_argument("--track-memory-seconds", type=positive_seconds, default=3.0,
+                   help="retain missing tracks for this many seconds (default: 3; overridden by --max-age)")
     p.add_argument("--n-init", type=positive, default=3)
-    p.add_argument("--max-cosine-distance", type=probability, default=0.2)
+    p.add_argument("--max-cosine-distance", type=probability, default=None,
+                   help="appearance distance limit (default: SFace 0.45, MobileNet 0.2)")
+    p.add_argument("--appearance-model", choices=('sface', 'mobilenet'), default='sface')
+    p.add_argument("--model-dir", type=Path, default=Path('.models'))
     p.add_argument("--model-selection", type=int, choices=(0, 1), default=0)
-    p.add_argument("--gpu", action="store_true", help="use a CUDA-compatible torch installation")
+    p.add_argument("--gpu", action="store_true", help="use CUDA with the optional MobileNet backend; SFace uses CPU")
     p.add_argument("--record", action="store_true")
+    p.add_argument("--record-raw", action="store_true", help="also save source_video.mp4 without overlays; requires --record")
+    p.add_argument("--diagnostics", action="store_true", help="log exact selection-rejection reasons and distances; no embeddings")
     p.add_argument("--output-dir", type=Path, default=Path("results"))
     p.add_argument("--headless", action="store_true", help="no display or mouse selection")
+    p.add_argument("--debug-overlay", action="store_true", help="show raw detections, tentative tracks and predictions")
     p.add_argument("--max-frames", type=positive)
     return p
 
@@ -70,10 +87,12 @@ def open_capture(args):
 
 
 def run(args):
+    if args.record_raw and not args.record:
+        raise ValueError('--record-raw requires --record')
     if args.headless and args.source == "webcam" and args.max_frames is None:
         raise ValueError("Headless webcam runs require --max-frames")
     cap = open_capture(args)
-    detector = logger = writer = None
+    detector = logger = writer = raw_writer = None
     latencies = []
     target = TargetManager()
     observations = []
@@ -91,7 +110,9 @@ def run(args):
         if args.source == "video" and reported_fps is None:
             raise RuntimeError("Video has no usable FPS; cannot assign defensible video timestamps")
         detector = FaceDetector(args.confidence, args.model_selection)
-        tracker = FaceTracker(args.max_age, args.n_init, args.max_cosine_distance, args.gpu)
+        tracker = FaceTracker(args.max_age, args.n_init, args.max_cosine_distance, args.gpu,
+                              memory_seconds=args.track_memory_seconds,
+                              appearance_model=args.appearance_model, model_dir=args.model_dir)
         height, width = frame.shape[:2]
         config = {k: str(v) if isinstance(v, Path) else v for k, v in vars(args).items()}
         logger = RunLogger(args.output_dir, {
@@ -100,8 +121,19 @@ def run(args):
             "timestamp_basis": "frame_index / reported_source_fps" if args.source == "video" else "monotonic capture elapsed",
             "latency_definition": "capture/read + detection + tracking + overlay; excludes logging, encoding and GUI wait",
             "reacquisition_definition": "current detection assigned to the SAME still-alive raw ID; not verified identity",
+            "track_memory": {"mode": "frames" if args.max_age is not None else "seconds",
+                             "limit": args.max_age if args.max_age is not None else args.track_memory_seconds,
+                             "recovery": "appearance and nearby geometry throughout track lifetime"},
+            "appearance": {"model": args.appearance_model,
+                           "distance_limit": args.max_cosine_distance if args.max_cosine_distance is not None
+                           else (.45 if args.appearance_model == 'sface' else .2),
+                           "target_reference": "frozen clicked-frame anchor with up to eight consistent recent views",
+                           "matching_checks": "appearance gates before assignment; selected return before duplicates",
+                           "competitors": "distinct simultaneously observed faces, not arbitrary stale raw IDs",
+                           "return_confirmation_frames": 3},
             "recording_fps": (reported_fps or 30.0) if args.record else None})
-        print(f"Results: {logger.directory}")
+        print(f"Results: {logger.directory.resolve()}", flush=True)
+        controls = Controls(logger.directory)
         if args.record:
             if reported_fps is None:
                 warnings.warn("Camera did not report FPS; recording uses 30 FPS, not measured throughput")
@@ -109,12 +141,19 @@ def run(args):
                                      cv2.VideoWriter_fourcc(*"mp4v"), reported_fps or 30.0, (width, height))
             if not writer.isOpened():
                 raise RuntimeError("Cannot initialize MP4 writer; check OpenCV codecs and output permissions")
+            if args.record_raw:
+                raw_writer = cv2.VideoWriter(str(logger.directory / 'source_video.mp4'),
+                                             cv2.VideoWriter_fourcc(*'mp4v'), reported_fps or 30.0, (width, height))
+                if not raw_writer.isOpened():
+                    raise RuntimeError('Cannot initialize source-video writer')
         if not args.headless:
             cv2.namedWindow(WINDOW)
 
             def mouse(event, x, y, flags, param):
                 if event == cv2.EVENT_LBUTTONDOWN:
-                    target.select(x, y, observations)
+                    if not controls.click(x, y):
+                        if target.select(x, y, observations):
+                            tracker.protect_target(target.target_id)
             cv2.setMouseCallback(WINDOW, mouse)
         wall_start = time.perf_counter()
         read_ms = 0.0  # first frame was decoded before model initialization
@@ -122,14 +161,18 @@ def run(args):
             started = time.perf_counter()
             timestamp = frames / reported_fps if args.source == "video" else started - wall_start
             detections = detector.detect(frame)
-            observations = tracker.update(detections, frame)
+            observations = tracker.update(detections, frame, timestamp=timestamp)
             target.update(observations)
             elapsed = time.perf_counter() - wall_start
             image = annotate(frame, detections, observations, target,
-                             frames / elapsed if elapsed > 0 else 0)
+                             frames / elapsed if elapsed > 0 else 0, debug=args.debug_overlay)
+            if not args.headless:
+                controls.draw(image)
             latency = (time.perf_counter() - started) * 1000 + read_ms
             latencies.append(latency)
             logger.log_frame(frames, timestamp, observations, target, latency)
+            if args.diagnostics:
+                logger.log_diagnostics(frames, timestamp, tracker.diagnostics())
             visible += int(target.visible)
             is_lost = target.status == "LOST"
             lost += int(is_lost)
@@ -139,6 +182,8 @@ def run(args):
                 if image.shape[:2] != (height, width):
                     raise RuntimeError("Input resolution changed during recording")
                 writer.write(image)
+                if raw_writer is not None:
+                    raw_writer.write(frame)
             frames += 1
             if not args.headless:
                 cv2.imshow(WINDOW, image)
@@ -147,10 +192,13 @@ def run(args):
                     break
                 if key in (ord("r"), ord("R")):
                     target.reset()
-                if key in (ord("s"), ord("S")):
-                    path = logger.directory / f"screenshot_{frames - 1:06d}.png"
-                    if not cv2.imwrite(str(path), image):
-                        raise RuntimeError(f"Screenshot write failed: {path}")
+                    tracker.protect_target(None)
+                if key in (ord("s"), ord("S"), ord(" ")):
+                    controls.request_save()
+                if key in (ord("o"), ord("O")):
+                    controls.open_folder()
+                if controls.save_requested:
+                    controls.save(image, frames - 1)
             if args.max_frames and frames >= args.max_frames:
                 break
             read_start = time.perf_counter()
@@ -168,6 +216,8 @@ def run(args):
             detector.close()
         if writer is not None:
             writer.release()
+        if raw_writer is not None:
+            raw_writer.release()
         if not args.headless:
             cv2.destroyAllWindows()
         if logger is not None:
