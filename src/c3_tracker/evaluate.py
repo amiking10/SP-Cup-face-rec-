@@ -77,6 +77,9 @@ def main(argv=None):
         parser.add_argument('--backend-factory',default='existing',help='existing or package.module:factory; factory(config) implements TrackerBackend')
         parser.add_argument('--gpu',action='store_true')
         args=parser.parse_args(argv)
+        if args.dataset=='chokepoint':
+            raise ValueError('ChokePoint provides eye points, not native face boxes. Use python -m c3_tracker.benchmark.chokepoint '
+                             'for verified eye-point diagnostics. Box/MOT scoring requires independently validated face boxes.')
         if args.dataset not in ('ava','common'):
             raise ValueError(f'{args.dataset} native format/footage has not been validated. No loader is claimed. See datasets/BENCHMARK_GUIDE.md for required common-format mapping.')
         if args.confidence>1 or args.iou_threshold>1 or (args.max_cosine_distance and args.max_cosine_distance>1):

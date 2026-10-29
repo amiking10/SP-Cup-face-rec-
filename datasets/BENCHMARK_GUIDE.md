@@ -35,13 +35,15 @@ metric inputs in a local subprocess; its dependencies never replace the tracker 
 | Dataset | Official source | Implemented support | Required mapping / limitation |
 | --- | --- | --- | --- |
 | AVA ActiveSpeaker v1.0 | [Google format/release](https://sites.research.google/gr/ava/download/), [CVDF videos/archives](https://github.com/cvdfoundation/ava-dataset) | Verified 8-field rows and explicitly encoded 5-field boxes; strict video-aware normalization | `entity_id` is a track-local face label. It is not a persistent physical identity across cuts or disappearance. AVA Actions body-box CSVs are rejected. |
-| ChokePoint | [Official site](http://arma.sourceforge.net/chokepoint/), [NIST entry](https://tsapps.nist.gov/BDbC/Search/Details/335) | No native loader claimed | Verify actual sequence images/video, frame numbering, subject IDs, face boxes, visibility, and annotation coverage. Identity labels alone are insufficient for localization/MOT metrics. Convert verified data to the common schema. |
+| ChokePoint | [Official site](http://arma.sourceforge.net/chokepoint/), [official archive](https://zenodo.org/records/815657) | Verified native XML eye-point diagnostics for P1E_S1; separate command below | Person IDs and eye points do not supply face boxes. No native box-IoU/MOT loader is claimed. Bystanders can be visible without labels. |
 | VPCD | [Oxford VGG](https://www.robots.ox.ac.uk/~vgg/data/Video_Person_Clustering/) | No native loader claimed | Obtain matching footage as well as track/person labels; verify exact time/frame/box metadata and character-to-person semantics. Track-level labels alone do not supply exhaustive per-frame boxes. |
-| MobiFace | [Official project](https://mobiface.github.io/) | No native loader claimed | Verify the supplied release's box ordering, frame origin and visibility conventions before conversion. Single-face data measures localization/robustness, not bystander rejection. Default multiface target designation will be unavailable. |
+| MobiFace | [Official project](https://mobiface.github.io/), [annotation protocol](https://arxiv.org/pdf/1805.09749) | No native loader claimed; approved local data still needed | Single-target labels may accompany videos with multiple faces. Verify box ordering, frame origin, absent-target encoding and release before conversion; unlabeled bystanders preclude exhaustive MOT metrics. |
 | Verified local common format | Locally permitted footage | Supported through `--dataset common --manifest ...` | Explicit coverage and identity semantics are mandatory. Persistent identities require a recorded provenance. |
 
 No native support is inferred from dataset names. The CLI returns a useful error for
-unverified ChokePoint/VPCD/MobiFace loaders. Do not download, mirror or commit footage
+unverified face-box ChokePoint/VPCD/MobiFace loaders. ChokePoint eye diagnostics use a
+separate metric family and entry point; see [additional dataset validation](ADDITIONAL_DATASET_VALIDATION.md).
+Do not download, mirror or commit footage
 whose source terms do not permit your intended use. These datasets do not provide
 synchronized physiological ground truth for HR/SpO2/blood-pressure claims.
 
