@@ -41,6 +41,15 @@ class RunLogger:
         self.file = (self.directory / "tracking_log.csv").open("w", newline="", encoding="utf-8")
         self.writer = csv.DictWriter(self.file, fieldnames=FIELDS)
         self.writer.writeheader()
+        self.diagnostics_file = None
+        if metadata.get('configuration', {}).get('diagnostics'):
+            self.diagnostics_file = (self.directory / 'association_diagnostics.jsonl').open('w', encoding='utf-8')
+
+    def log_diagnostics(self, index, timestamp, values):
+        if self.diagnostics_file is not None:
+            row = {'frame_index': index, 'capture_timestamp_s': timestamp, **values}
+            self.diagnostics_file.write(json.dumps(row, allow_nan=False) + '\n')
+            self.diagnostics_file.flush()
 
     def log_frame(self, index, timestamp, observations, target, latency_ms):
         for o in observations or [None]:
@@ -57,4 +66,6 @@ class RunLogger:
 
     def close(self, summary):
         self.file.close()
+        if self.diagnostics_file is not None:
+            self.diagnostics_file.close()
         write_json(self.directory / "summary.json", summary)

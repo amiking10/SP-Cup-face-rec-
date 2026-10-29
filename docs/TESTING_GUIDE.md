@@ -1,5 +1,46 @@
 # C3 experiment and annotation protocol
 
+## Desktop controls and quick regression check
+
+Launch from the repository root with `.\.venv\Scripts\python.exe -m c3_tracker --source webcam`.
+The normal display shows only confirmed tracks with a current face detection. Lost
+tracks remain in the CSV and selected-target LOST state, but their prediction boxes
+are hidden. Use `--debug-overlay` when investigating detections and stale tracks.
+The default detection threshold is now 0.65; use the same threshold when comparing runs.
+
+Click **Save [S/Space]**, or focus the tracking window and press S or Space. Look for
+the **Saved:** message at the bottom, then click **Open folder [O]** to find the PNG
+inside `results/<run>/`. The terminal also prints its absolute path. Space and the
+mouse button avoid keyboard-layout differences. Test each input once and open each PNG.
+An error message should keep the tracker running if a screenshot cannot be written.
+
+Move sideways, turn your head, and briefly cover your face for a few frames. Verify
+manually that the same person's ID persists where recovery is unambiguous, that missing
+faces lose their visible box, and that no second box lingers over an old position.
+Repeat with two different people; record any identity swaps, failures, or new IDs.
+Recovery after short gaps uses appearance plus nearby geometry; ambiguous returns and
+returns after track expiry can still need manual reselection. Passing automated
+regressions does not establish accuracy during live motion or crossing people.
+The default memory now lasts three seconds, with recovery throughout that interval;
+use `--track-memory-seconds 5` for five seconds. Select A, hide only A for one second
+while B remains visible, and verify A returns under A's original ID while B keeps B's.
+Repeat at different FPS. A should be LOST while hidden; never count predictions as visibility.
+
+The default backend now uses aligned SFace face descriptors. Setup once with
+`python -m c3_tracker.models --download`. When selecting A, its clicked-frame anchor
+and a small bank of closely consistent recent views are frozen.
+After loss, automatic return needs three consecutive compatible observations and a
+margin over the other face. Some uncertain returns will stay LOST and need manual selection.
+Add a deliberate wrong-person test: while A is selected, A leaves and B moves into
+A's former position. The selected ID must remain LOST, with no green box on B.
+Then A returns before memory expires: verify that only A turns green after confirmation.
+Record any failure; similarity checks do not guarantee identity correctness.
+Also turn and move closer/farther while staying visible. Verify that a rejected
+selected match does not generate a new tentative ID on every frame. After a false
+loss, a compatible return should recover the original selected ID before any
+duplicate track can consume the face. Manually reselect and verify that stale
+IDs for that same face do not permanently block the new selection.
+
 ## Preparation
 
 Obtain consent from both participants. Assign real-person labels A and B on a paper
@@ -38,8 +79,9 @@ follow the wrong person. Mark an unjudgeable association as unannotated, never a
 3. At least one crossing must involve partial face overlap; avoid unsafe physical contact.
 4. Note frame ranges for each crossing, including approach, overlap and separation.
 5. Hold each final position briefly. Include an additional optional occlusion/exit trial:
-   A leaves the frame briefly, then returns; repeat with an absence longer than `max_age`
-   processed frames. Do not automatically reselect on return.
+   A leaves the frame for one second, then returns while B stays visible. Repeat with
+   an absence longer than the configured memory (three seconds by default, or `max_age`
+   processed frames if that override is supplied). Do not automatically reselect on return.
 6. Review the actual person inside every highlighted box through the crossings. Record ID
    changes, loss spans, wrong assignments and whether a return reused a still-alive ID or
    created a new one. New IDs do not establish identity recovery.
@@ -103,6 +145,21 @@ the current annotated-target CSV does not provide that ground truth.
 
 ## Automated and headless checks
 
+For a short live failure recording, use:
+
+```powershell
+.\.venv\Scripts\python.exe -m c3_tracker --source webcam --record --record-raw --diagnostics
+```
+
+Select one face, reproduce a head turn or brief disappearance, then quit with Q.
+Keep the entire run folder. `source_video.mp4` has no overlays; it shares frame indices
+with `annotated_video.mp4`, the CSV and `association_diagnostics.jsonl`. Source video is
+still compressed; the JSONL records the actual live matching distances and decisions.
+It distinguishes absent detection, failed alignment, appearance-gallery/reference/anchor
+rejection, competing-face ambiguity, motion rejection, pending verification and expiry.
+It contains no embedding vectors. Do not estimate live identity thresholds from an
+annotated-video replay alone: boxes, text and compression can alter model outputs.
+
 ```powershell
 python -m pytest -q
 python -m c3_tracker --help
@@ -118,15 +175,17 @@ error, and a decodable annotated MP4. A PID, successful import or empty log is i
 Cloud checks cannot establish Windows camera permissions, desktop interactions, sustained FPS,
 or person-to-track correctness. Complete both live protocols locally before making C3 claims.
 
-Opt-in tests also load the actual bundled models and generate temporary MP4s from two
-copies of Matplotlib's bundled sample photograph (not two independently tracked people):
+Opt-in tests load the actual face models and generate temporary MP4s from sample
+photographs. A distinct-face replacement regression uses a second public OpenCV sample:
 
 ```powershell
+python -m c3_tracker.models --download --test-fixtures
 $env:C3_RUN_MODEL_TESTS = "1"
 python -m pytest -q
 Remove-Item Env:\C3_RUN_MODEL_TESTS
 ```
 
 These verify detection, confirmation, predicted-only loss, same-ID return while alive,
-expiry without cross-ID reassignment, end-to-end CSV/JSON output and MP4 decoding. They
+expiry without cross-ID reassignment, rejection of a second face occupying the selection's
+old position, three-frame selected return, end-to-end CSV/JSON output and MP4 decoding. They
 are still synthetic pipeline smoke checks, not evidence of real-person tracking accuracy.
