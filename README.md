@@ -164,6 +164,12 @@ wall-clock timing when processing falls behind. Review CSV timestamps as well.
 
 ## Experiments and evaluation
 
+For reproducible annotated-video benchmarking, start with
+[datasets/BENCHMARK_GUIDE.md](datasets/BENCHMARK_GUIDE.md). The new
+`python -m c3_tracker.evaluate` CLI runs raw-video inference, then separate AVA/common
+ground-truth scoring, C3 evaluation and optional overlays. The existing
+`c3_tracker.evaluation` commands below remain available for manually annotated live runs.
+
 Follow [TESTING_GUIDE.md](docs/TESTING_GUIDE.md) for the stationary and crossing
 experiments, independent person annotations, resolution comparisons, and evaluation:
 

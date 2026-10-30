@@ -2,17 +2,22 @@
 
 **Scope:** IEEE SP Cup 2027 C3 — tracking one designated face among bystanders. This is a dataset acquisition/preparation guide, not evidence of benchmark performance.
 
+For executable video-aligned AVA preparation, leakage-separated inference/evaluation,
+MOT/C3 metrics, oracle experiments and Windows commands, see
+[BENCHMARK_GUIDE.md](BENCHMARK_GUIDE.md). The older preparation script below produces
+metadata only; the benchmark uses a stricter common schema with source frame indices.
+
 ## Recommended sources and limitations
 
 | Dataset | Official source | Useful annotations | C3 use | Availability / caution |
 | --- | --- | --- | --- | --- |
 | **AVA ActiveSpeaker v1.0** (start here) | https://sites.research.google/gr/ava/download/ ; https://github.com/cvdfoundation/ava-dataset | Time-indexed normalized face bounding boxes and `entity_id` linking adjacent frames | Multi-face association, short-term ID switches, occlusion within a track | Annotation archives public; video files are hosted separately. `entity_id` is **not** a guaranteed persistent identity across scene changes. Movie rights belong to their respective owners. |
 | **VPCD** | https://www.robots.ox.ac.uk/~vgg/data/Video_Person_Clustering/ | >35k face-tracks labeled with character/person identity | Longer-term identity matching, reappearance | Annotation/features can be downloaded; source video availability and rights need review separately; face-track metadata may not yield full per-frame bounding-box ground truth without preprocessing. |
-| **MobiFace** | https://mobiface.github.io/ | >95k annotated face bounding boxes in 80 mobile recordings | Tracking robustness, motion, pose, mobile capture | **Single-face** tracking dataset; cannot by itself test rejection of bystanders. Request access with institutional academic email; do not mirror. |
-| **ChokePoint** | http://arma.sourceforge.net/chokepoint/ ; https://tsapps.nist.gov/BDbC/Search/Details/335 | Face sequences with subject identities in doorway camera recordings | Identity recognition and reacquisition | Check annotation coverage: challenging multi-person sequences have been reported as unannotated; do not infer full IDF1/HOTA support. |
+| **MobiFace** | https://mobiface.github.io/ | >95k annotated target-face bounding boxes in 80 mobile recordings | Tracking robustness, motion, pose, mobile capture | **Single-target annotations**; videos can contain multiple faces. Bystanders are not exhaustively labeled. Request access with institutional academic email; do not mirror. |
+| **ChokePoint** | http://arma.sourceforge.net/chokepoint/ ; https://zenodo.org/records/815657 | Verified XML person IDs and left/right eye points; no native face boxes | Eye-containment and prediction-ID reuse diagnostics | P1E_S1 camera views tested with the separate eye-point command. Do not infer box IoU, standard IDF1/HOTA, or physical absence from these labels. See [additional dataset validation](ADDITIONAL_DATASET_VALIDATION.md). |
 | **Self-annotated permitted videos** | Local, not distributed in Git | Framewise face boxes + physical-person identity | Target-specific C3 error testing | Follow organizer ethics/IRB and informed-consent rules for participant-collected competition data. Do not commit identifiable recordings. |
 
-**Avoid as primary benchmarks:** MOT17/SportsMOT (pedestrian or player tracking, not face tracks); UBFC-rPPG/PURE (usually single-person physiology); MobiFace alone (primarily single face). These can support separate secondary tests.
+**Avoid as primary benchmarks:** MOT17/SportsMOT (pedestrian or player tracking, not face tracks); UBFC-rPPG/PURE (usually single-person physiology); MobiFace alone (one annotated target, no exhaustive bystander identities). These can support separate secondary tests.
 
 ## Recommended order
 
