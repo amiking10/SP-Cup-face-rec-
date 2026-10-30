@@ -382,6 +382,11 @@ fixtures; they also do not establish real-world tracking quality.
 Set `C3_RUN_DATASET_TESTS=1` as well to audit the actual 80 MobiFace native annotation
 files when they are present locally. This opt-in check never downloads data.
 
+Local validation on 2026-10-30 passed all 153 tests with real-model, isolated HOTA
+and native MobiFace-file checks enabled. `pip check` also passed. CI uses synthetic
+fixtures and skips checks requiring those optional local assets. Actual-video evidence
+is reported separately in the AVA and MobiFace guides.
+
 The local real AVA smoke run and six-condition matrix validate execution and alignment
 on a short interval, not a full AVA benchmark. The conservative partial-coverage run
 withholds unsupported identity metrics, and can legitimately report failed target

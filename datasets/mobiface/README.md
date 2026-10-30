@@ -114,7 +114,8 @@ verified physical-person reacquisition remain unavailable.
 ## Actual validation on 2026-10-30
 
 All 80 native files passed parsing/geometry/range checks. Test sequence `7I5t6BAHSGQ_0`
-was evaluated without threshold tuning. A public format-243 source prefix was stream-
+was evaluated without threshold tuning, with final reporting verified from clean
+revision `923203e`. A public format-243 source prefix was stream-
 copied from original frame zero through 60 seconds, without resize, seek or re-encoding:
 202x360, 30 FPS, 1,800 decoded frames. Annotation frames 0–1091 map to source frames
 **391–1482**. Multiple overlays, including later frames, support this declared metadata
@@ -137,11 +138,14 @@ This clip has no annotated absence or missing-label intervals. Those semantics w
 audited in the full annotation release and tested with synthetic inference fixtures;
 real-video disappearance/return performance was not established by this run.
 
-On the recorded Windows/Python 3.11 CPU setup, instrumented throughput was 20.83 FPS;
-mean/p95 selected-frame latency was 47.97/63.74 ms. The separate probe averaged 2.98 ms,
-and detector+tracking time averaged 44.76 ms. These measurements include diagnostics
-and are not an uninstrumented speed claim; exact hardware/environment are in the output.
+On the recorded Windows/Python 3.11 CPU setup, instrumented throughput was 31.05 FPS;
+mean/p95 selected-frame latency was 32.18/40.63 ms. The separate probe averaged 2.11 ms,
+and detector+tracking time averaged 29.90 ms. These single-run measurements include
+diagnostics and depend on system load; they are not an uninstrumented speed claim.
+Exact hardware/environment are in the output.
 
-Local outputs are under ignored `results/mobiface_native_test_final/`, including stage
+Local outputs are under ignored `results/mobiface_native_test_reviewed/`, including stage
 reports, initialization evidence and an annotated video. This is one test sequence,
 not full-split accuracy or a tuning set; the other 79 videos were not evaluated.
+The rerun's predictions match the earlier frozen run apart from latency, and its
+annotated video is byte-identical to the visually inspected earlier artifact.
