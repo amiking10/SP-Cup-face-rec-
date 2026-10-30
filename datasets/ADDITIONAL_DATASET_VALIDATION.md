@@ -105,6 +105,64 @@ in the eye-pair denominator; zero ID changes among successful matches cannot est
 reliable retention when many annotated samples were missed. See the saved per-person
 denominators and overlays before interpreting identity diagnostics.
 
+### Public-only extension: complete available P1E_S1 recording
+
+On 2026-10-30, testing was extended using public ChokePoint data only. The fixed
+protocol covers all available JPEGs in source interval `[0,4410)` for cameras 1/2/3,
+at original 800x600 resolution and native/10 FPS. The original source timeline spans
+147 seconds; each camera supplies 2,292 JPEGs with gaps, including 764 on the 10 FPS
+sampling grid. These are three views of the same 25 labeled people, not 75 independent
+subjects. Six experiments processed 9,168 samples from 6,876 distinct source JPEGs.
+
+The unchanged tracker was measured at revision `17e63bd`, with a clean working tree,
+SFace on CPU, seed 0 and one OpenCV thread per experiment. No target was designated,
+and no thresholds were selected using these results. Eye-containment results were:
+
+| Camera | Native matched / labeled pairs | Native recall | 10 FPS matched / labeled pairs | 10 FPS recall | People with any match, native / 10 FPS |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| P1E_S1_C1 | 688 / 1,382 | 49.78% | 204 / 462 | 44.16% | 25 / 25 |
+| P1E_S1_C2 | 731 / 1,073 | 68.13% | 198 / 358 | 55.31% | 25 / 24 |
+| P1E_S1_C3 | 284 / 453 | 62.69% | 49 / 152 | 32.24% | 25 / 18 |
+
+All six conditions recorded zero custom within-run ID changes and cross-person ID
+reassignment events among matches. No labeled person matched multiple prediction IDs
+in these runs. Nevertheless, seven of 25 labeled people had **no eye-pair match** in
+the camera-3 10 FPS condition; those people had 3–6 labeled samples each. Thus zero
+ID changes does not establish adequate coverage or target reacquisition. Standard
+box/MOT scores and physical re-identification remain unavailable under this protocol.
+
+All exported source indices/timestamps, videos, original annotation denominators and
+frozen code hashes were checked. Overlays were inspected in the later recording
+interval, including a camera-3 10 FPS failure. Local results, protocol script and a
+comparison report are under ignored `results/chokepoint_public_full/`.
+
+After extracting the complete camera archives using the commands above, repeat the
+registered conditions from PowerShell with a fresh output directory:
+
+```powershell
+@'
+from dataclasses import replace
+from pathlib import Path
+from c3_tracker.benchmark.chokepoint import run_sequence
+from c3_tracker.benchmark.inference import BenchmarkConfig
+
+data = Path('datasets/data/raw/chokepoint')
+output = Path('results/chokepoint_full_repeat')
+config = BenchmarkConfig(target_enabled=False)
+for camera in (1, 2, 3):
+    sequence = f'P1E_S1_C{camera}'
+    for fps in (None, 10):
+        name = sequence + ('_nativefps' if fps is None else '_10fps')
+        result = run_sequence(data/sequence, data/'groundtruth'/(sequence+'.xml'),
+                              output/name, replace(config, fps=fps),
+                              start=0, end=4410, overlay=True)
+        print(result, flush=True)
+'@ | .\.venv\Scripts\python.exe -
+```
+
+VPCD and MobiFace remain unscored with the publicly available inputs present locally.
+No restricted data or access requests were used for this extension.
+
 ## VPCD: matching source footage missing
 
 The [official project](https://www.robots.ox.ac.uk/~vgg/data/Video_Person_Clustering/)
