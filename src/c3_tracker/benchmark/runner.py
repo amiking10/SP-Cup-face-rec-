@@ -75,10 +75,16 @@ def combine_metrics(per_video):
     target.update(initialization_candidates=planned,successful_initializations=initialized,
                   initialization_success_rate=ratio(initialized,planned),
                   sequences_without_eligible_multiface_frame=sum(r['initialization']['frame_index'] is None for r in results))
-    for key in ('target_visible_annotated_frames','correct_target_frames','evaluable_target_assignments','bystander_replacement_frames','false_positive_target_frames'):
+    for key in ('target_visible_annotated_frames','correct_target_frames','evaluable_target_assignments'):
         target[key] = sum(r['target'][key] for r in results)
+    for key in ('bystander_replacement_frames','false_positive_target_frames'):
+        values = [r['target'][key] for r in results]
+        target[key] = sum(values) if all(value is not None for value in values) else None
     target['target_recall'] = ratio(target['correct_target_frames'],target['target_visible_annotated_frames'])
-    target['wrong_person_assignment_rate'] = ratio(target['bystander_replacement_frames'],target['evaluable_target_assignments'])
+    target['wrong_person_assignment_rate'] = (ratio(target['bystander_replacement_frames'],target['evaluable_target_assignments'])
+                                             if target['bystander_replacement_frames'] is not None else None)
+    if target['bystander_replacement_frames'] is None:
+        target['bystander_metrics_unavailable_reason'] = 'At least one sequence has single-target annotations without exhaustive bystander identities'
     return {'detection':detection,'tracking':tracking,'target':target}
 
 

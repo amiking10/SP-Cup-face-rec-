@@ -131,6 +131,12 @@ def test_single_target_integration_and_future_gt_isolation(tmp_path):
     assert metrics['target_localization']['unknown_samples']==1 and metrics['target_localization']['annotated_absent_samples']==1
     assert result['metrics']['detection']['precision'] is None and metrics['tracking']['idf1'] is None
     assert metrics['target']['correct_target_reacquisition_rate'] is None
+    assert metrics['target']['bystander_metrics_unavailable_reason']
+    for key in ('wrong_person_assignment_rate','false_target_assignment_rate',
+                'bystander_replacement_frames','false_positive_target_frames'):
+        assert metrics['target'][key] is None
+        if key in result['metrics']['target']:
+            assert result['metrics']['target'][key] is None
     from c3_tracker.benchmark.schema import fingerprint
     annotation=folder/name/'annotations.csv'
     with annotation.open() as stream:rows=list(csv.DictReader(stream))
