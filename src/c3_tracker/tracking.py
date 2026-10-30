@@ -72,7 +72,7 @@ class FaceTracker:
         tracks = self.tracker.update_tracks(raw, embeds=embeds, frame=frame)
         if self.collect_stages:
             self.last_stage_snapshot = {
-                'confidence_accepted':accepted,
+                'baseline_detector_output':accepted,
                 'descriptor_success':[{'bbox':list(map(float,d.bbox)),'confidence':float(d.confidence)} for d in detections],
             }
         return observations_from_tracks(tracks, frame.shape[1], frame.shape[0])

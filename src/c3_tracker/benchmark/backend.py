@@ -53,12 +53,15 @@ class ExistingTrackerBackend:
             probe_started = time.perf_counter()
             raw = self.detector_probe.detect(frame) if self.detector_probe is not None else None
             self._snapshot = {**self.tracker.last_stage_snapshot,
+                              'confidence_accepted':[item for item in self.tracker.last_stage_snapshot['baseline_detector_output']
+                                                     if item['confidence']>=self.config.confidence],
                               'raw_detector_probe':None if raw is None else [
                                   {'bbox':list(map(float,d.bbox)),'confidence':float(d.confidence)} for d in raw],
                               'probe_confidence':min(self.config.diagnostic_probe_confidence,self.config.confidence),
                               'baseline_detector_tracking_ms':baseline_ms,
                               'diagnostic_probe_ms':(time.perf_counter()-probe_started)*1000,
-                              'raw_probe_semantics':'Separate MediaPipe pass at stated score floor, after MediaPipe NMS; not unfiltered network logits. Baseline detector call is unchanged.'}
+                              'raw_probe_semantics':'Separate post-NMS MediaPipe pass at requested score floor, not unfiltered logits. Actual returned scores are recorded; no strict API output-score floor is assumed.',
+                              'confidence_filter_semantics':'Explicit reported-score filter for diagnosis only; actual baseline detector outputs still feed the tracker unchanged.'}
         return observations
 
     def stage_snapshot(self):

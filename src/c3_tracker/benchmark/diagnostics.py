@@ -7,7 +7,7 @@ import numpy as np
 from .matching import iou_matrix, match_boxes
 from .schema import scale_box, write_csv, write_json
 
-STAGES = ('raw_detector_probe','confidence_accepted','descriptor_success','tentative_tracks',
+STAGES = ('raw_detector_probe','baseline_detector_output','confidence_accepted','descriptor_success','tentative_tracks',
           'confirmed_tracks','confirmed_observed','all_observed')
 
 
@@ -31,11 +31,11 @@ def initialization_diagnostic(target_box, observations, snapshot, config):
              'ambiguity_policy':'Existing one-to-one Hungarian assignment; no new ambiguity rejection or future retry',
              'failure_category':'no_matching_predicted_track','stage_max_iou':{}}
     if snapshot is not None:
-        audit['available_stage_detections'] = {stage:snapshot.get(stage) for stage in STAGES[:3]}
-        for stage in ('raw_detector_probe','confidence_accepted','descriptor_success'):
+        audit['available_stage_detections'] = {stage:snapshot.get(stage) for stage in STAGES[:4]}
+        for stage in STAGES[:4]:
             values = snapshot.get(stage)
             audit['stage_max_iou'][stage] = None if values is None else best_overlap(target_box,values)
-        accepted = audit['stage_max_iou']['confidence_accepted']
+        accepted = audit['stage_max_iou']['baseline_detector_output']
         described = audit['stage_max_iou']['descriptor_success']
         raw = snapshot.get('raw_detector_probe')
         if accepted is not None and accepted<config.iou_threshold:
@@ -44,7 +44,8 @@ def initialization_diagnostic(target_box, observations, snapshot, config):
                 audit['failure_category'] = ('detection_below_confidence_in_probe' if
                     all(item['confidence']<config.confidence for item in overlapping) else 'raw_probe_baseline_disagreement')
             elif raw is not None:
-                audit['failure_category'] = 'no_raw_detection_overlapping_designated_target'
+                audit['failure_category'] = ('raw_detection_below_initialization_iou_gate' if
+                    best_overlap(target_box,raw)>0 else 'no_raw_detection_overlapping_designated_target')
         elif described is not None and described<config.iou_threshold:
             audit['failure_category'] = 'appearance_extraction_failure'
         elif best_overlap(target_box,tentative)>=config.iou_threshold and not candidates:
@@ -58,7 +59,7 @@ def initialization_diagnostic(target_box, observations, snapshot, config):
 def frame_stages(frame):
     snapshot = frame.stages or {}
     tracks = [observation_dict(o) for o in frame.observations]
-    return {**{key:snapshot.get(key) for key in STAGES[:3]},
+    return {**{key:snapshot.get(key) for key in STAGES[:4]},
             'tentative_tracks':[o for o in tracks if not o['confirmed']],
             'confirmed_tracks':[o for o in tracks if o['confirmed']],
             'confirmed_observed':[o for o in tracks if o['confirmed'] and o['observed']],
@@ -76,14 +77,14 @@ def _failure_example(video, frame, ground_truth, stages, category, output):
         cap.release()
     image = cv2.resize(image,(frame.width,frame.height))
     image = cv2.copyMakeBorder(image,90,0,0,0,cv2.BORDER_CONSTANT,value=(20,20,20))
-    for stage,color in [('confidence_accepted',(0,150,255)),('descriptor_success',(0,220,0)),('confirmed_observed',(255,0,255))]:
+    for stage,color in [('baseline_detector_output',(0,150,255)),('descriptor_success',(0,220,0)),('confirmed_observed',(255,0,255))]:
         for item in stages.get(stage) or ():
             x1,y1,x2,y2 = map(int,item['bbox'])
             cv2.rectangle(image,(x1,y1+90),(x2,y2+90),color,1)
     x1,y1,x2,y2 = map(int,ground_truth)
     cv2.rectangle(image,(x1,y1+90),(x2,y2+90),(255,255,0),2)
     lines = [f'frame {frame.frame_index} | {frame.timestamp_s:.3f}s',category,
-             'GT cyan | accepted orange | descriptor green', 'confirmed observed magenta | overlays after inference']
+             'GT cyan | baseline orange | descriptor green', 'confirmed observed magenta | overlays after inference']
     for index,text in enumerate(lines):
         width = cv2.getTextSize(text,0,.38,1)[0][0]
         scale = .38*min(1,(frame.width-10)/max(1,width))
@@ -99,11 +100,14 @@ def write_stage_diagnostics(sequence, frames, initialization, config, output):
                    'available_frames':0,'gate_matches':{str(gate):0 for gate in gates},'best_iou_sum':0.0} for key in STAGES}
     confidence_sensitivity = {str(t):{'matched_faces':0,'annotated_face_denominator':0} for t in (.1,.3,.5,.65,.8)}
     rows,detections,examples,categories = [],[],[],{}
+    baseline_scores,probe_scores = [],[]
     selected_examples = {}
     snapshots = (output/'stage_snapshots.jsonl').open('w',encoding='utf-8')
     try:
         for frame in frames:
             stages = frame_stages(frame)
+            baseline_scores.extend(item['confidence'] for item in stages['baseline_detector_output'] or ())
+            probe_scores.extend(item['confidence'] for item in stages['raw_detector_probe'] or ())
             snapshots.write(json.dumps({'frame_index':frame.frame_index,'timestamp_s':frame.timestamp_s,'stages':frame.stages},allow_nan=False)+'\n')
             known = frame.frame_index in sequence.ground_truth
             gt = [g for g in sequence.ground_truth.get(frame.frame_index,()) if g.visible]
@@ -147,10 +151,10 @@ def write_stage_diagnostics(sequence, frames, initialization, config, output):
                 for index in misses:
                     evidence = {stage:None if values is None else best_overlap(boxes[index],values)
                                 for stage,values in stages.items() if stage!='confirmed_tracks'}
-                    if stages['confidence_accepted'] is None or stages['descriptor_success'] is None:
+                    if stages['baseline_detector_output'] is None or stages['descriptor_success'] is None:
                         category = 'stage_telemetry_unavailable'
-                    elif evidence['confidence_accepted']<config.iou_threshold:
-                        category = 'no_accepted_box_at_iou_gate'
+                    elif evidence['baseline_detector_output']<config.iou_threshold:
+                        category = 'no_baseline_box_at_iou_gate'
                     elif evidence['descriptor_success']<config.iou_threshold:
                         category = 'appearance_extraction_loss'
                     elif evidence['all_observed']<config.iou_threshold:
@@ -184,10 +188,15 @@ def write_stage_diagnostics(sequence, frames, initialization, config, output):
     result = {'stages':totals,'missed_confirmed_face_diagnostics':categories,'examples':examples,
               'initialization':initialization,'iou_gate':config.iou_threshold,
               'raw_probe_confidence':min(config.diagnostic_probe_confidence,config.confidence),
+              'baseline_confidence_configured':config.confidence,
+              'baseline_returned_scores_below_configured_confidence':sum(score<config.confidence for score in baseline_scores) if baseline_scores else None,
+              'baseline_min_returned_score':min(baseline_scores,default=None),
+              'probe_min_returned_score':min(probe_scores,default=None),
+              'confidence_filter_scope':'confidence_accepted is an explicit reported-score filter for diagnosis only. The unchanged tracker consumes baseline_detector_output, not this diagnostic subset.',
               'confidence_sensitivity':confidence_sensitivity,
               'confidence_sensitivity_scope':'Post-filtered outputs of one low-floor MediaPipe probe, not separate operational detector runs and not threshold optimization',
               'stage_scope':'Independent per-stage one-to-one IoU matches to provided GT; unknown annotation frames excluded. Counts do not certify exhaustive face coverage.',
-              'raw_stage_scope':'Probe is a separate post-NMS MediaPipe pass. Baseline confidence/NMS invocation is unchanged. No pre-NMS or truly unthresholded network output is claimed.',
+              'raw_stage_scope':'Probe is a separate post-NMS MediaPipe pass at a requested score floor. Actual returned scores are measured; no effective floor, pre-NMS or truly unthresholded network output is assumed. Baseline invocation is unchanged.',
               'failure_scope':'Per-final-missed-GT spatial stage evidence, not a guaranteed causal partition; one-to-one assignments can differ between stages.',
               'timing_scope':'Instrumented end-to-end latency includes probe overhead; baseline detector+tracking timing is separately retained in snapshots.'}
     init_frame = next((frame for frame in frames if frame.frame_index==initialization.get('frame_index')),None)
@@ -210,7 +219,8 @@ def write_stage_diagnostics(sequence, frames, initialization, config, output):
         display = lambda value:'unavailable' if value is None else (str(value) if isinstance(value,int) else f'{value:.4f}')
         lines.append(f'| {stage} | {total["output_boxes_all_frames"]} | {total["annotated_face_denominator"]} | {display(total["matched_faces"])} | {display(total["recall"])} | {display(total["mean_best_iou_including_misses"])} |')
     lines += ['',f'Initialization: {initialization["status"]}; category: {initialization.get("failure_category")}.',
-              'The raw probe is post-NMS at a stated low score floor. Confidence-accepted boxes come from the unchanged baseline detector call.',
+              'The raw probe is post-NMS at a requested low score floor. Actual baseline detector outputs are reported separately.',
+              'confidence_accepted applies an explicit reported-score threshold for diagnosis only; it is not substituted into the baseline pipeline.',
               'Appearance extraction and observation/confirmation stages reuse the actual baseline execution.',
               'Confidence sensitivity and overlap-gate sensitivity are diagnostics; baseline thresholds were not optimized.',
               'Known-frame recall is annotation-relative. Standard identity/precision eligibility remains governed by the main benchmark.',

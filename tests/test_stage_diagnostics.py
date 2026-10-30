@@ -31,7 +31,7 @@ def test_low_confidence_probe_is_separate_and_does_not_change_baseline_detector_
         def __init__(self,confidence,model_selection):self.confidence=confidence
         def detect(self,frame):
             calls.append(('detect',self.confidence))
-            boxes=[detection.Detection(BOX,.9)]
+            boxes=[detection.Detection(BOX,.9),detection.Detection((40,20,50,30),.6)]
             return boxes+[detection.Detection((50,20,60,30),.2)] if self.confidence<.2 else boxes
         def close(self):pass
     class Tracker:
@@ -39,20 +39,21 @@ def test_low_confidence_probe_is_separate_and_does_not_change_baseline_detector_
         def update(self,detections,frame,timestamp):
             calls.append(('track',len(detections)))
             values=[{'bbox':list(d.bbox),'confidence':d.confidence} for d in detections]
-            self.last_stage_snapshot={'confidence_accepted':values,'descriptor_success':values}
+            self.last_stage_snapshot={'baseline_detector_output':values,'descriptor_success':values}
             return [Observation('1',BOX,True,True)]
     monkeypatch.setattr(detection,'FaceDetector',Detector)
     monkeypatch.setattr(tracking,'FaceTracker',Tracker)
     image=np.zeros((64,100,3),np.uint8)
     diagnostic=ExistingTrackerBackend(BenchmarkConfig(stage_diagnostics=True))
     result=diagnostic.process(image,0)
-    assert calls==[('detect',.65),('track',1),('detect',.01)]
-    assert len(diagnostic.stage_snapshot()['raw_detector_probe'])==2
+    assert calls==[('detect',.65),('track',2),('detect',.01)]
+    assert len(diagnostic.stage_snapshot()['raw_detector_probe'])==3
+    assert len(diagnostic.stage_snapshot()['baseline_detector_output'])==2
     assert len(diagnostic.stage_snapshot()['confidence_accepted'])==1
     calls.clear()
     baseline=ExistingTrackerBackend(BenchmarkConfig())
     assert baseline.process(image,0)==result
-    assert calls==[('detect',.65),('track',1)]
+    assert calls==[('detect',.65),('track',2)]
     assert baseline.stage_snapshot() is None
 
 
@@ -69,9 +70,12 @@ def test_multiple_candidates_are_reported_without_inventing_an_ambiguity_rejecti
     ([DETECTION],[DETECTION],[],[],'appearance_extraction_failure'),
     ([DETECTION],[DETECTION],[DETECTION],[Observation('1',BOX,True,False)],'track_still_unconfirmed'),
     ([DETECTION],[DETECTION],[DETECTION],[],'no_matching_predicted_track'),
+    ([{**DETECTION,'bbox':(10,20,18,40)}],[{**DETECTION,'bbox':(10,20,18,40)}],
+     [{**DETECTION,'bbox':(10,20,18,40)}],[Observation('1',(10,20,18,40),True,True)],
+     'raw_detection_below_initialization_iou_gate'),
 ])
 def test_initialization_failure_categories_are_based_on_actual_stage_evidence(raw,accepted,described,observations,expected):
-    snapshot={'raw_detector_probe':raw,'confidence_accepted':accepted,'descriptor_success':described}
+    snapshot={'raw_detector_probe':raw,'baseline_detector_output':accepted,'confidence_accepted':accepted,'descriptor_success':described}
     report=initialization_diagnostic(BOX,observations,snapshot,BenchmarkConfig())
     assert report['failure_category']==expected
 
@@ -87,7 +91,7 @@ class InstrumentedColorBackend(ColorBackend):
 
     def stage_snapshot(self):
         return {'raw_detector_probe':self.accepted+[{'bbox':(1,1,5,5),'confidence':.1}],
-                'confidence_accepted':self.accepted,'descriptor_success':self.described,
+                'baseline_detector_output':self.accepted,'confidence_accepted':self.accepted,'descriptor_success':self.described,
                 'baseline_detector_tracking_ms':1.0,'diagnostic_probe_ms':1.0}
 
 
