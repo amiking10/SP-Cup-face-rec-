@@ -184,6 +184,10 @@ def load_sequence(entry, root):
         raise ValueError(f'No annotated frames for {video.video_id}')
     for records in by_frame.values():
         records.sort(key=lambda gt: gt.person_id)
+    if entry.get('annotation_type')=='single_target':
+        target = entry.get('designated_person_id')
+        if not target or any(len(records)>1 or any(gt.person_id!=target for gt in records) for records in by_frame.values()):
+            raise ValueError('single_target annotations require one fixed designated_person_id and at most one row per frame')
     if entry['identity_scope'] == 'persistent' and not entry.get('identity_provenance'):
         raise ValueError('persistent identities require identity_provenance, not inferred track IDs')
     expected_video = entry.get('video_sha256')

@@ -252,6 +252,10 @@ def score_sequence(sequence, predicted_frames, initialization, config):
                  'prediction_filter': 'observed AND confirmed; predictions without a current detection are not scored',
                  'matching': f'frame-local one-to-one Hungarian IoU >= {config.iou_threshold}',
                  'scope': 'Only explicitly annotated/known-empty source frames; unknown frames excluded, never assumed empty'}
-    return {'detection': detection, 'tracking': mot, 'target': target_metrics.finish(),
-            'initialization': initialization, 'experiment': config.experiment}, frame_metrics, visual, (
+    result = {'detection': detection, 'tracking': mot, 'target': target_metrics.finish(),
+              'initialization': initialization, 'experiment': config.experiment}
+    if sequence.metadata.get('annotation_type')=='single_target':
+        from .target_localization import score_target_localization
+        result['target_localization'] = score_target_localization(sequence,predicted_frames,initialization,config)
+    return result, frame_metrics, visual, (
                 [_hota_data(block) for block in blocks] if supported else [])
