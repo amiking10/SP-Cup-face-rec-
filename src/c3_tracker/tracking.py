@@ -29,10 +29,12 @@ def observations_from_tracks(tracks, width, height):
 
 class FaceTracker:
     def __init__(self, max_age=None, n_init=3, max_cosine_distance=None, gpu=False,
-                 memory_seconds=3.0, appearance_model='sface', model_dir=None):
+                 memory_seconds=3.0, appearance_model='sface', model_dir=None, collect_stages=False):
         from deep_sort_realtime.deepsort_tracker import DeepSort
         from .association import FaceAssociationTracker
         try:
+            self.collect_stages = collect_stages
+            self.last_stage_snapshot = None
             self.face_embedder = None
             if appearance_model == 'sface':
                 from .embedding import FaceEmbedder
@@ -60,6 +62,7 @@ class FaceTracker:
         # Video uses its source timeline; webcam uses monotonic elapsed time.
         self.tracker.tracker.timestamp = timestamp
         detected_faces = len(detections)
+        accepted = [{'bbox':list(map(float,d.bbox)),'confidence':float(d.confidence)} for d in detections] if self.collect_stages else None
         embeds = None
         if self.face_embedder is not None:
             detections, embeds = self.face_embedder.encode(detections, frame)
@@ -67,6 +70,11 @@ class FaceTracker:
         raw = [([d.bbox[0], d.bbox[1], d.bbox[2] - d.bbox[0],
                  d.bbox[3] - d.bbox[1]], d.confidence, "face") for d in detections]
         tracks = self.tracker.update_tracks(raw, embeds=embeds, frame=frame)
+        if self.collect_stages:
+            self.last_stage_snapshot = {
+                'baseline_detector_output':accepted,
+                'descriptor_success':[{'bbox':list(map(float,d.bbox)),'confidence':float(d.confidence)} for d in detections],
+            }
         return observations_from_tracks(tracks, frame.shape[1], frame.shape[0])
 
     def protect_target(self, track_id):

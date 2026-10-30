@@ -25,9 +25,37 @@ def resolution(value):
     return tuple(map(int,match.groups()))
 
 
+def iou_thresholds(value):
+    try:
+        values=tuple(float(item) for item in value.split(','))
+        if not values or any(not math.isfinite(item) or not 0<item<=1 for item in values):
+            raise ValueError()
+        return values
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError('use comma-separated IoU thresholds in (0,1]') from exc
+
+
 def main(argv=None):
     argv=list(sys.argv[1:] if argv is None else argv)
     try:
+        if argv and argv[0]=='audit-mobiface':
+            parser=argparse.ArgumentParser(description='Audit native MobiFace annotations without claiming video evaluation')
+            parser.add_argument('--data-root',type=Path,default=Path('datasets/data/raw/mobiface'))
+            parser.add_argument('--output',type=Path,required=True)
+            args=parser.parse_args(argv[1:])
+            from .benchmark.mobiface import audit_annotations
+            result=audit_annotations(args.data_root,args.output)
+            print(json.dumps({key:value for key,value in result.items() if key!='sequences'},indent=2))
+            return 0
+        if argv and argv[0]=='prepare-mobiface':
+            parser=argparse.ArgumentParser(description='Normalize native MobiFace annotations against explicitly aligned local video')
+            parser.add_argument('--manifest',type=Path,required=True)
+            parser.add_argument('--output',type=Path,required=True)
+            args=parser.parse_args(argv[1:])
+            from .benchmark.mobiface import prepare_mobiface
+            result=prepare_mobiface(args.manifest,args.output)
+            print(json.dumps({'prepared_videos':len(result['videos']),'manifest':str(args.output/'manifest.json')}))
+            return 0
         if argv and argv[0]=='prepare':
             parser=argparse.ArgumentParser(description='Normalize verified AVA annotations using an explicit video manifest')
             parser.add_argument('--manifest',type=Path,required=True)
@@ -61,6 +89,9 @@ def main(argv=None):
         parser.add_argument('--fps',type=positive)
         parser.add_argument('--matrix',action='store_true',help='original/640x480/320x240 at native and 10 FPS')
         parser.add_argument('--annotate-video',action='store_true')
+        parser.add_argument('--stage-diagnostics',action='store_true',help='post-inference stage report; adds a separate low-confidence detector probe')
+        parser.add_argument('--diagnostic-probe-confidence',type=positive,default=.01)
+        parser.add_argument('--target-iou-thresholds',type=iou_thresholds,default=(.3,.5,.7))
         parser.add_argument('--hota-python',type=Path,help='separate TrackEval interpreter; see guide')
         parser.add_argument('--appearance-model',choices=('sface','mobilenet'),default='sface')
         parser.add_argument('--model-dir',default='.models')
@@ -80,9 +111,9 @@ def main(argv=None):
         if args.dataset=='chokepoint':
             raise ValueError('ChokePoint provides eye points, not native face boxes. Use python -m c3_tracker.benchmark.chokepoint '
                              'for verified eye-point diagnostics. Box/MOT scoring requires independently validated face boxes.')
-        if args.dataset not in ('ava','common'):
+        if args.dataset not in ('ava','common','mobiface'):
             raise ValueError(f'{args.dataset} native format/footage has not been validated. No loader is claimed. See datasets/BENCHMARK_GUIDE.md for required common-format mapping.')
-        if args.confidence>1 or args.iou_threshold>1 or (args.max_cosine_distance and args.max_cosine_distance>1):
+        if args.confidence>1 or args.iou_threshold>1 or args.diagnostic_probe_confidence>1 or (args.max_cosine_distance and args.max_cosine_distance>1):
             raise ValueError('Confidence and IoU/cosine limits must be <= 1')
         if args.n_init<1 or args.threads<1 or args.max_frames is not None and args.max_frames<1:
             raise ValueError('n-init, threads and max-frames must be positive')
@@ -92,14 +123,16 @@ def main(argv=None):
             raise ValueError('--matrix defines its own resolution/FPS conditions; do not combine it with --resolution/--fps')
         if args.gpu and args.appearance_model=='sface':
             raise ValueError('SFace baseline uses CPU; --gpu applies to the MobileNet backend only')
-        default_folder='ava_active_speaker' if args.dataset=='ava' else 'common'
+        default_folder='ava_active_speaker' if args.dataset=='ava' else args.dataset
         manifest=args.manifest or args.data_root/'processed'/default_folder/'manifest.json'
         config=BenchmarkConfig(experiment=args.experiment,resolution=args.resolution,fps=args.fps,
                                confidence=args.confidence,model_selection=args.model_selection,n_init=args.n_init,
                                memory_seconds=args.track_memory_seconds,max_cosine_distance=args.max_cosine_distance,
                                appearance_model=args.appearance_model,model_dir=args.model_dir,gpu=args.gpu,
                                iou_threshold=args.iou_threshold,target_enabled=not args.no_target,
-                               max_frames=args.max_frames,backend_factory=args.backend_factory,seed=args.seed,threads=args.threads)
+                               max_frames=args.max_frames,backend_factory=args.backend_factory,seed=args.seed,threads=args.threads,
+                               stage_diagnostics=args.stage_diagnostics,diagnostic_probe_confidence=args.diagnostic_probe_confidence,
+                               target_iou_thresholds=args.target_iou_thresholds)
         from .benchmark.runner import run_benchmark,environment
         from .benchmark.schema import write_json,fingerprint
         if args.matrix:

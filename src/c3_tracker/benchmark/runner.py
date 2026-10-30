@@ -75,10 +75,16 @@ def combine_metrics(per_video):
     target.update(initialization_candidates=planned,successful_initializations=initialized,
                   initialization_success_rate=ratio(initialized,planned),
                   sequences_without_eligible_multiface_frame=sum(r['initialization']['frame_index'] is None for r in results))
-    for key in ('target_visible_annotated_frames','correct_target_frames','evaluable_target_assignments','bystander_replacement_frames','false_positive_target_frames'):
+    for key in ('target_visible_annotated_frames','correct_target_frames','evaluable_target_assignments'):
         target[key] = sum(r['target'][key] for r in results)
+    for key in ('bystander_replacement_frames','false_positive_target_frames'):
+        values = [r['target'][key] for r in results]
+        target[key] = sum(values) if all(value is not None for value in values) else None
     target['target_recall'] = ratio(target['correct_target_frames'],target['target_visible_annotated_frames'])
-    target['wrong_person_assignment_rate'] = ratio(target['bystander_replacement_frames'],target['evaluable_target_assignments'])
+    target['wrong_person_assignment_rate'] = (ratio(target['bystander_replacement_frames'],target['evaluable_target_assignments'])
+                                             if target['bystander_replacement_frames'] is not None else None)
+    if target['bystander_replacement_frames'] is None:
+        target['bystander_metrics_unavailable_reason'] = 'At least one sequence has single-target annotations without exhaustive bystander identities'
     return {'detection':detection,'tracking':tracking,'target':target}
 
 
@@ -147,8 +153,26 @@ def run_benchmark(manifest_path, dataset, output, config, video_ids=None, overla
             per_video_folder.mkdir(parents=True,exist_ok=True)
             per_video_predictions=per_video_folder/'predictions.csv'
             write_csv(per_video_predictions,PRED_FIELDS,(row for frame in frames for row in frame.rows(video.video_id)))
+            stage_snapshots = {frame.frame_index:frame.stages for frame in frames}
             frames=read_predictions(per_video_predictions,video,config.resolution or (video.width,video.height))
+            for frame in frames:
+                frame.stages = stage_snapshots[frame.frame_index]
             result,frame_rows,visual,hota_data = score_sequence(sequence,frames,audit,config)
+            write_json(per_video_folder/'initialization_diagnostics.json',audit)
+            if audit['status']!='initialized':
+                write_json(per_video_folder/'initialization_failure.json',audit)
+            if config.stage_diagnostics:
+                from .diagnostics import write_stage_diagnostics
+                stage_result = write_stage_diagnostics(sequence,frames,audit,config,per_video_folder)
+                result['stage_diagnostics'] = stage_result['stages']
+                if len(entries)==1:
+                    for filename in ('stage_metrics.json','diagnostic_stages.csv','stage_detections.csv',
+                                     'initialization_diagnostics.json','initialization_failure.json','diagnostic_report.md',
+                                     'stage_snapshots.jsonl','initialization_frame.png'):
+                        if (per_video_folder/filename).is_file():
+                            shutil.copy2(per_video_folder/filename,output/filename)
+                    for image in per_video_folder.glob('example_*.png'):
+                        shutil.copy2(image,output/image.name)
             frame_writer.writerows(frame_rows);frame_file.flush()
             results[video.video_id],performance[video.video_id] = result,speed
             hota_groups[video.video_id] = hota_data
@@ -207,10 +231,19 @@ def run_benchmark(manifest_path, dataset, output, config, video_ids=None, overla
                        'AVA track-local entity IDs do not establish persistent physical identity after disappearance.',
                        'Models were not trained or tuned by this runner. Mocked/synthetic tests are not real-world performance evidence.',
                        '', 'Reproducibility and initialization audit: experiment_config.json. Timing definitions and hardware: performance.json.'])
+        if any('target_localization' in value for value in results.values()):
+            report.extend(['','Single-target localization/coverage and selected-ID retention are in each video\'s target_localization object.',
+                           'Best-box coverage is a post-inference diagnostic, not a GT-assisted tracking prediction. This warmup/confirmed-track initialization differs from official first-frame-box SOT protocols.'])
         (output/'report.md').write_text('\n'.join(report)+'\n',encoding='utf-8')
         return {'output':str(output),'metrics':combined,'videos':len(results)}
     except BaseException as exc:
         experiment.update(status='failed',error=f'{type(exc).__name__}: {exc}')
+        if hasattr(exc,'failure_category'):
+            detail = {'failure_category':exc.failure_category,'frame_index':exc.frame_index,
+                      'initialization':exc.initialization_audit,
+                      'scope':'Input alignment failure; initialization may not yet have been attempted'}
+            experiment['failure_details']=detail
+            write_json(output/'alignment_failure.json',detail)
         write_json(output/'experiment_config.json',experiment)
         raise
     finally:

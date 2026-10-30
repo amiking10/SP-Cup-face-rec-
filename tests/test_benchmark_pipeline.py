@@ -146,7 +146,7 @@ def test_normal_mode_rejects_oracle_input(tmp_path):
 
 
 def test_unverified_dataset_loader_and_missing_annotations_are_clear(tmp_path,capsys):
-    assert main(['--dataset','mobiface','--output',str(tmp_path/'out')])==1
+    assert main(['--dataset','vpcd','--output',str(tmp_path/'out')])==1
     assert 'No loader is claimed' in capsys.readouterr().err
     assert main(['--dataset','ava','--data-root',str(tmp_path),'--output',str(tmp_path/'out')])==1
     assert 'manifest not found' in capsys.readouterr().err

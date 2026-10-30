@@ -160,8 +160,9 @@ for camera in (1, 2, 3):
 '@ | .\.venv\Scripts\python.exe -
 ```
 
-VPCD and MobiFace remain unscored with the publicly available inputs present locally.
-No restricted data or access requests were used for this extension.
+At the time of this public-only extension, VPCD and MobiFace remained unscored with
+the inputs then present locally. No restricted data or access requests were used for
+that extension. Subsequent MobiFace work with the user-provided source is recorded below.
 
 ## VPCD: matching source footage missing
 
@@ -179,21 +180,22 @@ verified native loader is claimed**. To proceed, provide matching raw clips plus
 release's metadata/README and verified frame-rate, resolution and timestamp mapping.
 Character identity semantics and annotation coverage must be checked before MOT/C3 scoring.
 
-## MobiFace: approved dataset not available locally
+## MobiFace: native integration after source registration
 
-The [official access page](https://mobiface.github.io/) accepts requests from research
-or academic institutions. No approved recordings/annotations are present locally;
-no request was submitted on the user's behalf and no restricted mirror was used.
-The linked evaluation download returned an unavailable response during inspection.
+The initial public-only inspection had no local MobiFace data and produced no scores.
+PR #5 subsequently registered the user-provided Drive source. The current native
+adapter and evidence supersede that earlier access limitation; see the
+[MobiFace guide](mobiface/README.md) for the canonical acquisition, audit, alignment,
+preparation and run instructions.
 
-The [authors' annotation protocol](https://arxiv.org/pdf/1805.09749) labels one target
-per video, including its absence state. Videos can contain multiple faces: 64 videos
-have the Multiple Faces attribute. This corrects the overly broad assumption that
-MobiFace videos contain only one face. Unlabeled bystanders prevent exhaustive MOT
-precision/IDF1/HOTA scoring without additional ground truth. The paper also distinguishes
-released training annotations from held-out evaluation labels; verify the actual release.
+Actual local inputs now include all 80 native annotation CSVs, combined/train/test
+metadata and the toolkit. Their 94,910 rows passed the native audit; the supplied
+split is 64 train / 16 test. A matching public-video prefix supports real evaluation
+of test sequence `7I5t6BAHSGQ_0` only: 982/1,092 target boxes covered at IoU >= 0.5,
+but fixed selected-ID retention is 88/1,089 after initialization. No thresholds changed.
+The remaining 79 videos have not been evaluated.
 
-To run real tests, provide the approved local dataset folder with annotations and
-matching frames/videos. Verify the actual box format, frame origin, sampling clock,
-zero/absent encoding and available split. **No MobiFace tracking score or verified
-native adapter is claimed until those files can be inspected.**
+One labeled target does not certify complete bystander annotations, physical identities
+or full MOT metrics. Missing labels remain unknown, and explicit absent-target rows
+are preserved. No data or media is redistributed, and no access request was sent on
+the user's behalf. [Dataset navigation](README.md) lists the current scope of each dataset.

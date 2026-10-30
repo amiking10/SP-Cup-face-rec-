@@ -1,6 +1,7 @@
 {
   "dataset": "MobiFace80",
-  "status": "registered_source_only_not_installed",
+  "status": "registered_source_native_adapter_available_data_not_distributed",
+  "native_adapter": "c3_tracker.benchmark.mobiface",
   "source_type": "shared_google_drive",
   "source_url": "https://drive.google.com/drive/folders/1LrVrx_InOo3og9RfCynQkMkfaVydn7ra",
   "project_url": "https://mobiface.github.io/",
@@ -53,10 +54,10 @@
   "annotation_semantics": {
     "target_boxes": "one annotated target per video segment; other visible faces not exhaustively labeled",
     "coordinate_system": "image pixels; left/top/width/height verified",
-    "frame_origin": "must audit against source frame; do not assume video clip offset",
+    "frame_origin": "zero-based clip-relative annotation frames; metadata first_frame/last_frame are inclusive original-source bounds; explicit clip or full_source media layout required",
     "identity_scope": "single annotated target per sequence; NOT an exhaustive multi-person ID dataset"
   },
   "requires_local_video": true,
   "requires_permission_review": true,
-  "notes": "Folder listing and sample annotation contents verified using connected Google Drive. File links are provenance only; no dataset media or annotations redistributed."
+  "notes": "All 80 native annotation files and supplied 64-train/16-test metadata audited locally. Toolkit indexing and one matching test video verify declared frame alignment. File links are provenance only; no dataset media or annotations redistributed. See README.md for the exact validation scope."
 }

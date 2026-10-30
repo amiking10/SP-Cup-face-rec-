@@ -37,11 +37,13 @@ metric inputs in a local subprocess; its dependencies never replace the tracker 
 | AVA ActiveSpeaker v1.0 | [Google format/release](https://sites.research.google/gr/ava/download/), [CVDF videos/archives](https://github.com/cvdfoundation/ava-dataset) | Verified 8-field rows and explicitly encoded 5-field boxes; strict video-aware normalization | `entity_id` is a track-local face label. It is not a persistent physical identity across cuts or disappearance. AVA Actions body-box CSVs are rejected. |
 | ChokePoint | [Official site](http://arma.sourceforge.net/chokepoint/), [official archive](https://zenodo.org/records/815657) | Verified native XML eye-point diagnostics for P1E_S1; separate command below | Person IDs and eye points do not supply face boxes. No native box-IoU/MOT loader is claimed. Bystanders can be visible without labels. |
 | VPCD | [Oxford VGG](https://www.robots.ox.ac.uk/~vgg/data/Video_Person_Clustering/) | No native loader claimed | Obtain matching footage as well as track/person labels; verify exact time/frame/box metadata and character-to-person semantics. Track-level labels alone do not supply exhaustive per-frame boxes. |
-| MobiFace | [Official project](https://mobiface.github.io/), [annotation protocol](https://arxiv.org/pdf/1805.09749) | No native loader claimed; approved local data still needed | Single-target labels may accompany videos with multiple faces. Verify box ordering, frame origin, absent-target encoding and release before conversion; unlabeled bystanders preclude exhaustive MOT metrics. |
+| MobiFace80 | [Provided source and native guide](mobiface/README.md), [official project](https://mobiface.github.io/) | Native metadata/annotation audit, explicit video alignment, common-schema preparation and evaluation | Supplied 64-train/16-test split preserved. One test sequence evaluated; single-target labels do not certify exhaustive bystander coverage or physical-person identities. |
 | Verified local common format | Locally permitted footage | Supported through `--dataset common --manifest ...` | Explicit coverage and identity semantics are mandatory. Persistent identities require a recorded provenance. |
 
 No native support is inferred from dataset names. The CLI returns a useful error for
-unverified face-box ChokePoint/VPCD/MobiFace loaders. ChokePoint eye diagnostics use a
+unverified face-box ChokePoint/VPCD loaders. MobiFace uses `audit-mobiface`,
+`prepare-mobiface`, then `--dataset mobiface`; its [native guide](mobiface/README.md)
+defines the required files and explicit clip/source alignment. ChokePoint eye diagnostics use a
 separate metric family and entry point; see [additional dataset validation](ADDITIONAL_DATASET_VALIDATION.md).
 Do not download, mirror or commit footage
 whose source terms do not permit your intended use. These datasets do not provide
@@ -175,6 +177,14 @@ concrete example above. The old `datasets/scripts/prepare_ava_annotations.py` re
 metadata-inspection utility; its normalized coordinates without frame indices are not
 the benchmark's video-aligned common format.
 
+If metadata inspection alone is needed, keep its output separate from prepared video GT:
+
+```powershell
+.\.venv\Scripts\python.exe datasets/scripts/prepare_ava_annotations.py --input datasets/data/raw/ava_active_speaker/annotations --output datasets/data/processed/ava_metadata
+```
+
+Do not pass `ava_metadata` to the benchmark as video-aligned annotations.
+
 ## Run the complete existing baseline
 
 ```powershell
@@ -204,6 +214,14 @@ FPS and 10 FPS. Resize uses explicit x/y scaling, not an undisclosed letterbox. 
 timestamps remain the real source-frame times. It never interpolates boxes or scores
 an unannotated frame as empty. Temporal gaps break metric continuity. Requested FPS
 above source FPS is rejected; use `--resolution` and `--fps` for individual conditions.
+
+For post-inference stage scoring, add `--stage-diagnostics`. This captures actual
+baseline detector output, successful descriptors, tentative/confirmed observations,
+and a separate low-confidence detector probe. Its explicit confidence-eligible subset
+is diagnostic only: the baseline's input is preserved, including API-returned scores
+below the configured argument. Instrumented throughput includes probe overhead.
+See [AVA diagnostics](AVA_DIAGNOSTICS.md) for the six-condition counts, exact
+initialization failure and reproducible commands.
 
 ## Ground-truth-box oracle experiment
 
@@ -251,6 +269,9 @@ manifest with `identity_scope: persistent`, `identity_provenance`, complete cove
 Target designation is deterministic: choose the first sampled annotated frame with at
 least two visible faces after the first two processed frames; designate its lexicographically
 first annotation ID; associate it using one-to-one IoU matching to observed confirmed tracks.
+For MobiFace's `single_target` annotations, the first visible designated-target frame
+after the same warmup is eligible without a two-face requirement. This is not the
+official SOT protocol that initializes with a GT box on the first video frame.
 Only that frame's information can initialize the tracker. The exact boxes, IDs, source
 index, timestamp, chosen prediction, IoU and outcome are saved. The backend receives only
 the chosen **predicted track ID**. Initialization is attempted once. If that designated face
@@ -318,12 +339,20 @@ results/ava_baseline/
   tracking_metrics.json
   performance.json
   experiment_config.json
+  per_video/<id>/initialization_diagnostics.json # root copy with stage diagnostics
   report.md
   annotated_video.mp4           # optional; per_video/<id>/ for several videos
   annotated_video.labels.json  # short display label -> original annotation ID
   per_video/<id>/predictions.csv
   hota_input.json              # optional post-inference metric input
   hota_metrics.json            # optional
+  diagnostic_stages.csv        # --stage-diagnostics, per-frame counts and matches
+  stage_detections.csv         # returned detector/descriptor boxes, no embeddings
+  stage_snapshots.jsonl        # inference-only stage telemetry
+  stage_metrics.json          # stage denominators and sensitivity analysis
+  initialization_failure.json # failed initialization with stage diagnostics
+  initialization_frame.png    # post-inference diagnostic illustration
+  diagnostic_report.md        # optional stage report and example PNG references
 ```
 
 Overlays are generated in a separate post-inference pass. Cyan boxes are GT, orange
@@ -350,6 +379,13 @@ errors, missing coverage, initialization failures, future-GT isolation and oracl
 isolation without dataset downloads. The color backend is **not** a face tracker.
 Optional tests run the actual pretrained models and reference HOTA on controlled
 fixtures; they also do not establish real-world tracking quality.
+Set `C3_RUN_DATASET_TESTS=1` as well to audit the actual 80 MobiFace native annotation
+files when they are present locally. This opt-in check never downloads data.
+
+Local validation on 2026-10-30 passed all 153 tests with real-model, isolated HOTA
+and native MobiFace-file checks enabled. `pip check` also passed. CI uses synthetic
+fixtures and skips checks requiring those optional local assets. Actual-video evidence
+is reported separately in the AVA and MobiFace guides.
 
 The local real AVA smoke run and six-condition matrix validate execution and alignment
 on a short interval, not a full AVA benchmark. The conservative partial-coverage run
@@ -365,8 +401,10 @@ and identity metrics were withheld because exhaustive annotation coverage was no
 independently certified. The one target initialization attempt failed, so this run
 provides no target-retention or reacquisition accuracy estimate. These are scoped
 smoke-test observations, not scores for the AVA split or other datasets. The tracker
-and thresholds were left unchanged; no full-split run or native loader for the other
-datasets was validated.
+and thresholds were left unchanged; no full-split score is claimed. The later
+[AVA stage report](AVA_DIAGNOSTICS.md) reproduces this result and explains the overlap
+failure. The [MobiFace guide](mobiface/README.md) records its now-supported native
+adapter, 80-file annotation audit and one real test-sequence evaluation.
 
 To add ByteTrack, BoT-SORT or another algorithm, implement `TrackerBackend` in
 `c3_tracker.benchmark.backend`: `process(frame, timestamp_s, oracle_boxes=None)` returns

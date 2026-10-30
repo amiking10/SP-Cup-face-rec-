@@ -10,6 +10,14 @@ from .matching import match_boxes
 from .schema import scale_box, validate_box
 
 
+class FrameAlignmentError(ValueError):
+    def __init__(self, message, frame_index, initialization_audit):
+        super().__init__(message)
+        self.frame_index = frame_index
+        self.failure_category = 'frame_timestamp_alignment_failure'
+        self.initialization_audit = dict(initialization_audit)
+
+
 @dataclass(frozen=True)
 class BenchmarkConfig:
     experiment: str = 'end_to_end'
@@ -30,6 +38,9 @@ class BenchmarkConfig:
     backend_factory: str = 'existing'
     seed: int = 0
     threads: int = 1
+    stage_diagnostics: bool = False
+    diagnostic_probe_confidence: float = .01
+    target_iou_thresholds: tuple = (.3,.5,.7)
 
 
 @dataclass(frozen=True)
@@ -40,6 +51,7 @@ class InitializationPlan:
     target_box: tuple
     visible_boxes: tuple
     visible_ids: tuple
+    policy: str = 'first sampled multiface frame after warmup; lexicographic annotation ID; one-to-one IoU'
 
 
 @dataclass
@@ -53,6 +65,7 @@ class PredictedFrame:
     target_status: str
     width: int
     height: int
+    stages: dict | None = None
 
     @property
     def target_visible(self):
@@ -95,14 +108,19 @@ def plan_initialization(sequence, indices, config):
         return None
     size = config.resolution or (sequence.video.width, sequence.video.height)
     source_size = sequence.video.width, sequence.video.height
+    single_target = sequence.metadata.get('annotation_type')=='single_target'
     for ordinal, index in enumerate(indices):
         records = [gt for gt in sequence.ground_truth.get(index, []) if gt.visible]
-        if ordinal >= config.target_min_processed_frame and len(records) >= 2:
+        if single_target:
+            records = [gt for gt in records if gt.person_id==sequence.metadata['designated_person_id']]
+        if ordinal >= config.target_min_processed_frame and len(records) >= (1 if single_target else 2):
             records.sort(key=lambda gt: gt.person_id)
             chosen = records[0]
             boxes = tuple(scale_box(gt.box, source_size, size) for gt in records)
+            policy = ('first sampled visible annotated target after warmup; one-to-one IoU; one attempt' if single_target else
+                      InitializationPlan.__dataclass_fields__['policy'].default)
             return InitializationPlan(index, index / sequence.video.fps, chosen.person_id,
-                                      boxes[0], boxes, tuple(gt.person_id for gt in records))
+                                      boxes[0], boxes, tuple(gt.person_id for gt in records),policy)
     return None
 
 
@@ -123,14 +141,19 @@ def infer_video(video, indices, config, backend, initialization=None, oracle_box
     selected_id = None
     was_lost = False
     size = config.resolution or (video.width, video.height)
-    audit = {'policy': 'first sampled multiface frame after warmup; lexicographic annotation ID; one-to-one IoU',
+    audit = {'policy': initialization.policy if initialization else 'no eligible initialization frame or target disabled',
              'ground_truth_used': 'one initialization frame only; labels never sent to backend',
              'status': 'no_eligible_multiface_frame' if initialization is None else 'pending',
              'frame_index': initialization.frame_index if initialization else None,
              'person_id': initialization.person_id if initialization else None,
              'information': asdict(initialization) if initialization else None,
              'selected_track_id': None, 'iou_threshold': config.iou_threshold,
-             'replacement_selection': 'never'}
+             'replacement_selection': 'never',
+             'failure_category':('insufficient_annotation_coverage_for_policy' if config.target_enabled and initialization is None else None),
+             'initialization_configuration':{'confidence':config.confidence,'n_init':config.n_init,
+                                             'warmup_processed_frames':config.target_min_processed_frame,
+                                             'iou_threshold':config.iou_threshold},
+             'target_box':list(initialization.target_box) if initialization else None}
     started_wall = time.perf_counter()
     timestamp_checks = 0
     try:
@@ -147,19 +170,20 @@ def infer_video(video, indices, config, backend, initialization=None, oracle_box
             if not ok:
                 raise RuntimeError(f'Cannot decode expected source frame {index}')
             if frame.shape[:2] != (video.height, video.width):
-                raise ValueError('Video resolution changed; prepared annotations are no longer aligned')
+                raise FrameAlignmentError('Video resolution changed; prepared annotations are no longer aligned',index,audit)
             decoded_position = cap.get(cv2.CAP_PROP_POS_FRAMES)
             if decoded_position and abs(decoded_position - index - 1) > .1:
-                raise ValueError(f'Decoder frame position mismatch at {index}')
+                raise FrameAlignmentError(f'Decoder frame position mismatch at {index}',index,audit)
             pts = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000
             if pts > 0:
                 if abs(pts - index / video.fps) > .51 / video.fps + .002:
-                    raise ValueError(f'Non-CFR or mismatched decoder timestamp at frame {index}: {pts}')
+                    raise FrameAlignmentError(f'Non-CFR or mismatched decoder timestamp at frame {index}: {pts}',index,audit)
                 timestamp_checks += 1
             if size != (video.width, video.height):
                 frame = cv2.resize(frame, size)
             supplied = oracle_boxes.get(index, ()) if oracle_boxes is not None else None
             observations = tuple(backend.process(frame, index / video.fps, oracle_boxes=supplied))
+            snapshot = backend.stage_snapshot() if config.stage_diagnostics and hasattr(backend,'stage_snapshot') else None
             ids = [o.track_id for o in observations]
             if len(set(ids)) != len(ids):
                 raise ValueError('Backend returned duplicate track IDs in one frame')
@@ -171,17 +195,19 @@ def infer_video(video, indices, config, backend, initialization=None, oracle_box
                                                        [o.bbox for o in eligible], config.iou_threshold)
                 selected = next((j for i, j in matches if i == 0), None)
                 audit['status'] = 'no_confirmed_prediction_for_designated_face'
+                from .diagnostics import initialization_diagnostic
+                audit.update(initialization_diagnostic(initialization.target_box,observations,snapshot,config))
                 if selected is not None:
                     selected_id = eligible[selected].track_id
                     backend.designate(selected_id)
-                    audit.update(status='initialized', selected_track_id=selected_id,
+                    audit.update(status='initialized', selected_track_id=selected_id,failure_category=None,
                                  initialization_iou=float(overlaps[0, selected]))
             visible = bool(selected_id and any(o.track_id == selected_id and o.observed and o.confirmed for o in observations))
             status = 'NOT SELECTED' if selected_id is None else (
                 ('REACQUIRED' if was_lost else 'VISIBLE') if visible else 'LOST')
             was_lost = selected_id is not None and not visible
             frames.append(PredictedFrame(index, len(frames), index / video.fps, observations,
-                                         (time.perf_counter() - started) * 1000, selected_id, status, *size))
+                                         (time.perf_counter() - started) * 1000, selected_id, status, *size,snapshot))
     finally:
         cap.release()
     elapsed = time.perf_counter() - started_wall
@@ -197,4 +223,7 @@ def infer_video(video, indices, config, backend, initialization=None, oracle_box
                    'timestamp_policy': 'source frame index / declared CFR FPS; positive decoder PTS checked',
                    'latency_definition': 'selected-frame read + resize + detection/embedding/tracking + target state; excludes exports/scoring/model startup',
                    'fps_definition': 'all inference frames / inference wall time, including skipped-frame decoding; excludes model startup/exports/evaluation'}
+    performance['diagnostic_probe_included_in_timing'] = config.stage_diagnostics
+    if config.stage_diagnostics:
+        performance['timing_note'] = 'Instrumented latency/FPS includes the separate low-confidence probe; stage snapshots also report baseline detector+tracking time separately.'
     return frames, audit, performance
