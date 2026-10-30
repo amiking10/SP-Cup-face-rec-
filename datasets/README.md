@@ -89,3 +89,9 @@ The output `entity_id` is a local annotation track identifier. **Do not treat it
 - VPCD: https://www.robots.ox.ac.uk/~vgg/data/Video_Person_Clustering/
 - MobiFace: https://mobiface.github.io/
 - ChokePoint: http://arma.sourceforge.net/chokepoint/
+
+## Verified MobiFace Google Drive source (2026-10-30)
+
+We inspected the shared [MobiFace80 Drive folder](https://drive.google.com/drive/folders/1LrVrx_InOo3og9RfCynQkMkfaVydn7ra). It contains metadata, train/test per-sequence target-face box CSVs, a toolkit, and reference results. The verified native columns are `frame,left,top,width,height` and the video metadata gives YouTube source ID, dimensions, FPS, and original frame interval. See [MobiFace source and acquisition guide](mobiface/README.md) and [source inventory](mobiface/source.json).
+
+**No raw dataset files are committed, no matching video footage has been verified, and the benchmark does not yet implement a native MobiFace loader.** Single-target annotations cannot support exhaustive bystander false-positive or identity metrics.
