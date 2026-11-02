@@ -80,7 +80,99 @@ python -m c3_tracker --source webcam --confidence 0.65 --n-init 3 --max-cosine-d
 python -m c3_tracker --source webcam --track-memory-seconds 5
 python -m c3_tracker --source video --input "C:\videos\test.mp4" --headless --max-frames 100 --record
 python -m c3_tracker --source webcam --record --record-raw --diagnostics
+python -m c3_tracker --source webcam --record --record-raw --roi-top 0.1 --roi-bottom=-0.1 --roi-left 0.05 --roi-right 0.05
 ```
+
+The selected face's **green box is the capture region**. By default its top is 20%
+of the original face height higher; its other edges retain their original positions.
+There is one green outline. This new box is the reference for four command-line
+adjustments, all defaulting to **0**:
+
+| Option | Positive value | Negative value | Fraction of |
+| --- | --- | --- | --- |
+| `--roi-top` | Raise top | Lower top | New default height |
+| `--roi-bottom` | Lower bottom | Raise bottom | New default height |
+| `--roi-left` | Move left edge left | Move left edge right | New default width |
+| `--roi-right` | Move right edge right | Move right edge left | New default width |
+
+Values are fractions: `0.1` means 10%, not 0.1 pixels. `0` keeps the **new default**
+edge, including its already-higher top. A 100-pixel-tall original face becomes 120
+pixels tall by default; `--roi-top 0.1` raises its top another 12 pixels.
+The example above expands the top another 10%, trims the bottom 10%, and expands
+each side 5%. Allowed values are [-1,1]; combined adjustments must leave positive
+width and height. Bounds are rounded outward to integer pixels and clipped to the
+image. Fractions use the new default dimensions **before** clipping at image edges.
+The previous temporary `--forehead-margin` option is replaced by these four options.
+
+Tracking, appearance embeddings, click selection and benchmark boxes continue to
+use the original detector geometry. Capture requires a selected, confirmed face
+with a current observation; LOST tracks supply no capture region. Padding can
+include hair/background and is not forehead-only skin segmentation.
+
+`tracking_log.csv` includes `capture_roi_left/top/right/bottom` on eligible target rows;
+other rows leave these fields blank. Use these integer bounds to crop the corresponding
+**unannotated** frame as `frame[top:bottom, left:right]`. Right/bottom are exclusive.
+`--record --record-raw` saves the matching source recording. Screenshots and the
+annotated recording include the adjusted green box; separate cropped images are not saved.
+
+### Export a synchronized pair for FaceVitals
+
+Use a clean constant-frame-rate (CFR) base video:
+
+```powershell
+.\.venv\Scripts\python.exe -m c3_tracker --source video --input "C:\videos\base.mp4" --record-pair
+```
+
+Click a confirmed face. Both exports start on the first processed frame with a valid
+selected green box. They end together at the **first target loss**, before that missing
+frame. The valid segment is saved immediately and never resumes automatically, even
+if the face returns. Pressing **Q**, closing the window, reaching the end of the input,
+resetting selection with **R**, selecting a different ID, or `--max-frames` also closes
+and saves the pair. After target loss, the preview can continue until you quit.
+
+Each run's results folder contains:
+
+- `original.mp4`: full, clean frames from the selected interval of the base video.
+- `face_centered.mp4`: the matching green-box crops, with no boxes, labels or controls.
+- `paired_recording.json`: selected ID, ROI margins, source start/end frames and times,
+  output dimensions, frame count, duration, stop reason and decoded-output verification.
+- The usual `tracking_log.csv` and `run_metadata.json`; output frame zero corresponds
+  to the metadata's `first_source_frame` in that log and input video.
+
+Both MP4s use the source FPS and the same `mp4v` codec, with no audio. The face output
+size is fixed from the first valid green box, rounded up to even dimensions. Later
+crops are resized to fit that canvas with aspect ratio preserved and centered black
+padding. An odd-sized full frame receives one padding row/column instead of losing
+image pixels. Both outputs are re-encoded; neither contains screen overlays.
+Before reporting success, both files are reopened and decoded to check equal frame
+counts, FPS and duration. Inconsistent source timestamps or skipped source frames
+stop the run and finalize the preceding segment rather than silently changing time.
+
+If you never select a valid face, no pair MP4s are created; metadata records
+`not_recorded`. `--record-pair` requires interactive video mode; webcam/headless modes
+are rejected. Existing `--record`/`--record-raw` behavior remains available separately.
+This exports inputs for FaceVitals; it does not run pulse estimation.
+
+For the **full-timeline comparison**, add `--pair-loss-policy mark`:
+
+```powershell
+.\.venv\Scripts\python.exe -m c3_tracker --source video --input "C:\videos\base.mp4" --record-pair --pair-loss-policy mark
+```
+
+Recording starts at the first valid selection, then keeps every source frame until
+Q, EOF or a selection reset/change. During target loss, `original.mp4` continues
+unchanged and `face_centered.mp4` contains a **FACE LOST** placeholder. When the
+same selected track becomes valid again, its face crop returns on the original clock.
+`frame_validity.csv` contains one row per output frame with output/source indices,
+timestamps, selected ID, `face_valid` (0/1) and reason. No missing interval is deleted.
+
+Use FaceVitals' **`python -m facevitals.compare_pair`** runner for these outputs. It
+skips placeholder pixels, resets pulse processing at gaps, and keeps unavailable BPM
+windows in the comparison CSV. Its original-video path never receives the tracker
+mask. The older GUI does not read this validity log and must not be used to interpret
+FACE LOST placeholder videos. See the FaceVitals README's C3 paired-input section
+for its required source-recording sidecar and command. Original default `stop` mode
+remains available for the earlier uninterrupted-clip workflow.
 
 Missing confirmed tracks are retained for **3 seconds** by default. Use
 `--track-memory-seconds 5` for a five-second absence window. Webcam expiry uses
@@ -133,7 +225,9 @@ Each run creates `results/<UTC timestamp>_<suffix>/` (override with `--output-di
   is a detector score, blank for predictions; it is **not association confidence**.
   `selected_target_id` persists across missing frames. `is_target` can be true for a
   predicted track, so valid downstream ROIs must require **is_target AND has_detection
-  AND confirmed AND target_visible**. No sample extraction is implemented here.
+  AND confirmed AND target_visible**. The separate `capture_roi_*` bounds add forehead
+  padding; original tracking coordinates remain available. No physiological sample
+  extraction is implemented here.
 - `run_metadata.json`: configuration, package/Python versions, actual resolution,
   reported source FPS, timestamp basis, OS/CPU details, measurement definitions.
 - `summary.json`: frame count, selected-target visible/lost frames, loss episodes,
