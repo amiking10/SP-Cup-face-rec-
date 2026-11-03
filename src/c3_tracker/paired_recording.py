@@ -1,22 +1,24 @@
 """Synchronized clean/full-frame and selected-face exports from a CFR input video."""
 import math
 import csv
+import hashlib
 from pathlib import Path
 
 import cv2
-import numpy as np
-
 from .logging_utils import write_json
-from .roi import DEFAULT_TOP_EXTENSION
+from .roi import DEFAULT_TOP_EXTENSION, capture_frame
 
 
 class PairedRecorder:
-    def __init__(self, directory, fps, source, source_size, margins, loss_policy='stop'):
+    def __init__(self, directory, fps, source, source_size, margins, loss_policy='stop',video_format='mp4'):
         if loss_policy not in ('stop', 'mark'):
             raise ValueError('Pair loss policy must be stop or mark')
         if not math.isfinite(fps) or fps <= 0:
             raise ValueError('Paired recording needs a positive source FPS')
         self.directory = Path(directory)
+        if video_format not in ('mp4','lossless'): raise ValueError('Unknown pair video format')
+        extension, self.codec=('mp4','mp4v') if video_format=='mp4' else ('mkv','FFV1')
+        self.video_files={'original':f'original.{extension}','cropped':f'face_centered.{extension}'}
         self.fps = fps
         self.status = 'waiting'
         self.writers = []
@@ -37,7 +39,7 @@ class PairedRecorder:
             'original_resolution': list(self.original_size), 'roi_margins': margins,
             'default_top_extension': DEFAULT_TOP_EXTENSION,
             'tracking_log': 'tracking_log.csv',
-            'codec': 'mp4v', 'audio': False, 'overlays': False,
+            'codec': self.codec, 'video_files':self.video_files,'audio': False, 'overlays': False,
             'crop_policy': 'First valid ROI dimensions rounded up to even pixels; later ROIs fitted with aspect ratio preserved and centered black padding',
             'original_padding_right_bottom': [width % 2, height % 2],
             'clock_policy': 'CFR input required; source index / FPS, checked against decoder timestamps',
@@ -49,7 +51,7 @@ class PairedRecorder:
             'missing_frame_policy': 'FACE LOST placeholders are invalid data, never pulse samples',
             'invalid_crop_placeholder': 'FACE LOST' if loss_policy=='mark' else None,
         }
-        for name in ('original.mp4', 'face_centered.mp4', 'paired_recording.json', 'frame_validity.csv'):
+        for name in (*self.video_files.values(), 'paired_recording.json', 'frame_validity.csv'):
             if (self.directory / name).exists():
                 raise ValueError(f'Paired output already exists: {name}')
 
@@ -70,8 +72,8 @@ class PairedRecorder:
         self.crop_size = width + width % 2, height + height % 2
         self.target_id = str(target_id)
         try:
-            for name, size in (('original.mp4', self.original_size), ('face_centered.mp4', self.crop_size)):
-                writer = cv2.VideoWriter(str(self.directory / name), cv2.VideoWriter_fourcc(*'mp4v'), self.fps, size)
+            for name, size in ((self.video_files['original'], self.original_size), (self.video_files['cropped'], self.crop_size)):
+                writer = cv2.VideoWriter(str(self.directory / name), cv2.VideoWriter_fourcc(*self.codec), self.fps, size)
                 self.writers.append(writer)
                 if not writer.isOpened():
                     raise RuntimeError(f'Cannot initialize paired video writer: {name}')
@@ -89,6 +91,14 @@ class PairedRecorder:
         self.validity_writer.writerow(['frame_index', 'source_frame_index', 'timestamp_s', 'source_timestamp_s',
                                       'target_id', 'face_valid', 'reason'])
         print(f'Paired recording started: target {target_id} -> {self.directory.resolve()}', flush=True)
+
+    def begin(self,target_id,roi):
+        """Start a fixed benchmark timeline, including an initially unavailable target."""
+        if self.status!='waiting' or target_id is None: raise ValueError('Pair cannot start in this state')
+        left,top,right,bottom=roi
+        if not (0<=left<right<=self.source_size[0] and 0<=top<bottom<=self.source_size[1]):
+            raise ValueError('Invalid initial crop canvas bounds')
+        self._start(target_id,roi)
 
     def update(self, frame, source_index, target_id, visible, roi, source_timestamp_s):
         """Write the same valid source pixels to both streams without overlays."""
@@ -117,20 +127,7 @@ class PairedRecorder:
                 raise ValueError('Invalid selected capture bounds for paired recording')
         if self.status == 'waiting':
             self._start(target_id, roi)
-        out_w, out_h = self.crop_size
-        centered = np.zeros((out_h, out_w, 3), dtype=frame.dtype)
-        if valid:
-            crop = frame[top:bottom, left:right]
-            scale = min(out_w / crop.shape[1], out_h / crop.shape[0])
-            fit_w = min(out_w, max(1, round(crop.shape[1] * scale)))
-            fit_h = min(out_h, max(1, round(crop.shape[0] * scale)))
-            fitted = cv2.resize(crop, (fit_w, fit_h), interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR)
-            x, y = (out_w - fit_w) // 2, (out_h - fit_h) // 2
-            centered[y:y + fit_h, x:x + fit_w] = fitted
-        else:
-            text = 'FACE LOST'
-            scale = min(.8, max(.05, (out_w - 6) / cv2.getTextSize(text, 0, 1, 1)[0][0]))
-            cv2.putText(centered, text, (3, max(10, out_h // 2)), 0, scale, (255, 255, 255), 1)
+        centered=capture_frame(frame,roi if valid else None,self.crop_size)
         original = cv2.copyMakeBorder(frame, 0, frame.shape[0] % 2, 0, frame.shape[1] % 2,
                                       cv2.BORDER_CONSTANT, value=(0, 0, 0))
         self.writers[0].write(original)
@@ -148,23 +145,29 @@ class PairedRecorder:
 
     def _verify(self):
         checks = {}
-        for name, size in (('original.mp4', self.original_size), ('face_centered.mp4', self.crop_size)):
+        for name, size in ((self.video_files['original'], self.original_size), (self.video_files['cropped'], self.crop_size)):
             cap = cv2.VideoCapture(str(self.directory / name))
             try:
                 if not cap.isOpened():
                     raise RuntimeError(f'Cannot reopen saved pair video: {name}')
                 fps = cap.get(cv2.CAP_PROP_FPS)
                 count = 0
+                expected_hash=self.metadata.get('expected_pixel_sha256',{}).get(name)
+                pixel_hash=hashlib.sha256() if expected_hash else None
                 while True:
                     ok, frame = cap.read()
                     if not ok:
                         break
                     if (frame.shape[1], frame.shape[0]) != size:
                         raise RuntimeError(f'Saved pair resolution mismatch: {name}')
+                    if pixel_hash is not None: pixel_hash.update(frame.tobytes())
                     count += 1
                 checks[name] = {'decoded_frames': count, 'fps': fps,
                                 'duration_s': count / fps if fps > 0 else None,
                                 'resolution': list(size)}
+                if pixel_hash is not None:
+                    checks[name]['pixel_sha256']=pixel_hash.hexdigest()
+                    if pixel_hash.hexdigest()!=expected_hash: raise RuntimeError(f'Lossless pixel mismatch: {name}')
                 if count != self.count or not math.isfinite(fps) or abs(fps - self.fps) > .001:
                     raise RuntimeError(f'Saved pair frame count/FPS mismatch: {name}')
             finally:

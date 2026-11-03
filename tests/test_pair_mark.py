@@ -37,3 +37,19 @@ def test_mark_still_stops_on_target_change(tmp_path):
     pair.update(frame,0,'1',True,(4,4,60,44),0)
     pair.update(frame,1,'2',True,(4,4,60,44),1/25)
     assert pair.status == 'saved' and pair.count == 1
+
+
+def test_lossless_exports_preserve_bgr_pixels_and_declared_filenames(tmp_path):
+    from c3_tracker.roi import capture_frame
+    pair=PairedRecorder(tmp_path,30,tmp_path/'base.mkv',(64,48),{},loss_policy='mark',video_format='lossless')
+    frame=np.random.default_rng(0).integers(0,256,(48,64,3),dtype=np.uint8)
+    roi=(4,4,60,44)
+    pair.begin('1',roi)
+    pair.update(frame,30,'1',True,roi,1)
+    pair.update(frame,31,'1',False,None,31/30)
+    pair.finish('end_of_input')
+    original,_=decode(tmp_path/'original.mkv');cropped,_=decode(tmp_path/'face_centered.mkv')
+    assert np.array_equal(original[0],frame) and np.array_equal(original[1],frame)
+    assert np.array_equal(cropped[0],capture_frame(frame,roi,(56,40)))
+    assert np.array_equal(cropped[1],capture_frame(frame,None,(56,40)))
+    assert pair.metadata['video_files']=={'original':'original.mkv','cropped':'face_centered.mkv'}

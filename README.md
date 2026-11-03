@@ -331,3 +331,15 @@ output, and actual SFace model checks with sample photographs. Distinct-face rep
 regressions check that a second face cannot take the selected ID in those scenarios.
 These are controlled pipeline tests; sustained real two-person tracking and crossings
 still need independent review on the intended PC. GPU execution is not established.
+
+## Multi-face benchmark adapter
+
+`python -m c3_tracker.benchmark.paired_export --selection-json click.json
+--tracking-only ...` logs a one-time designated-target benchmark run. The JSON
+contains one `frame_index` and pixel `bbox: [left, top, right, bottom]`; it never
+provides future identities or boxes. Failed designation is reported explicitly.
+`python -m c3_tracker.benchmark.composite_pair --tracking-export export.json
+--output OUTPUT --start-frame 30` turns those logged ROIs into synchronized
+lossless FFV1/MKV files, verifying every decoded pixel against the intended frames.
+The normal desktop recorder continues to produce MP4. This adapter is for the
+FaceVitals composite experiment, not an automatic target-selection UI.
