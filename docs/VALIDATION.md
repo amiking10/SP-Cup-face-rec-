@@ -6,6 +6,29 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## First-frame face selection: 6 November 2026
+
+Local FaceVitals commit `748a675` replaces manual rectangle drawing with detected
+first-frame face boxes and explicit click selection. Processing stays disabled
+without a selected detection, including no-face and detector-error cases.
+
+- Tests first: updated tests failed before the new selection helpers existed.
+- Full suite: 554 passed, 76 optional checks skipped, 7 upstream warnings. Report:
+  `results/facevitals-integration/face-selection-full-python-tests.xml`.
+- Independent focused review: all 16 recorded-interface checks passed, including
+  scaled click mapping, selection switching, blank clicks and failure cases.
+  No confirmed major issue remained; this was not formal PR approval.
+- Repository health: no errors; the existing unverified paper-card warning remains.
+  Changed Markdown file targets and whitespace were checked.
+
+The user explicitly confirmed centered 1.5x tracked face boxes and NaN on loss.
+Pulse processing, filtering, windowing, ROI enlargement and missing-frame policy
+were unchanged. The maintained processing backend remains active; legacy forehead
+extraction, pixel reuse and HeartPy finalization were not substituted. Future
+departures from the FaceVitals contract require permission. MATLAB exclusion and
+optional-test limits are the same as the recorded-interface run below. No dataset
+or personal-video processing was performed. This commit is local and unpublished.
+
 ## FaceVitals recorded interface: 6 November 2026
 
 Local FaceVitals commit `9b4f7bb` adds recorded-video target drawing, background

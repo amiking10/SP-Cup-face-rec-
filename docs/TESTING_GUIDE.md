@@ -20,7 +20,9 @@ benchmark. From the FaceRec root, with the shared installation active:
 1. Open a clean CFR video with the intended face visible in the first frame.
    Prefer a clip long enough for a 10-second valid window before and after a
    brief absence, with a second person staying visible during the absence.
-2. Draw a tight rectangle around the intended face and choose `toolbox-pos@track`.
+2. Check that the first frame shows face boxes. Click the intended face box; it
+   turns green. Processing must remain disabled without a selected detection.
+   Choose `toolbox-pos@track`.
    Press **Process video** and wait for completion. The window should remain responsive.
 3. Move the timeline slider. Verify the green preview box follows the intended
    person, disappears during loss, and never switches to the bystander. Initial

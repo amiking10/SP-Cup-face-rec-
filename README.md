@@ -144,7 +144,7 @@ current Windows regression checks from earlier model and dataset measurements.
 A headless FaceVitals tracker and ROI-to-BPM pipeline are prepared in a separate local checkout;
 see [adapter status and test commands](docs/DEPENDENCIES.md#local-facevitals-adapter-work).
 Missing intervals remain unavailable and restart the pulse window. A maintained
-recorded-video interface now adds target drawing and timeline review; see the
+recorded-video interface now adds detected-face selection and timeline review; see the
 [launch command](docs/DEPENDENCIES.md#local-facevitals-adapter-work).
 Live processing, deleted-ID recovery and scored dataset acceptance remain pending;
 this work is local and the legacy FaceVitals GUI is unchanged.

@@ -90,6 +90,8 @@ The integration is saved in a separate ignored FaceVitals checkout:
 `69f86df` (following adapter commit `089db69`), based on upstream `cbbbc3a`.
 Current upstream `83c544e` was subsequently merged; recorded interface commit
 `9b4f7bb` adds the Tk workflow described below.
+Commit `748a675` subsequently changes designation to clicking detected face boxes;
+it preserves the centered 1.5x ROI, NaN-on-loss policy and maintained processing.
 It is not vendored into FaceRec and has not
 been pushed or merged into FaceVitals. The legacy FaceRec snapshot is unchanged.
 
@@ -100,7 +102,7 @@ first-second policy. Tracked mean, 72-pixel crop and grid ROI variants now feed
 FaceVitals pulse methods. Missing samples stay unavailable; each uninterrupted
 valid span starts fresh pulse processing on the original video clock. No predicted
 box or placeholder is passed to a pulse method. A maintained recorded-video Tk
-interface now calls this path with first-frame target drawing and timeline review.
+interface now calls this path with detected first-frame face selection and timeline review.
 Deleted-ID recovery, live processing and scored dataset acceptance remain later
 steps. The read-only legacy GUI is unchanged. No dataset runs accompanied this step.
 
@@ -110,13 +112,15 @@ Launch the recorded-video interface from the FaceRec root:
 .\.venv-shared\Scripts\python.exe -m facevitals.recorded --tracker-model-dir .models --output-dir results/facevitals-recorded
 ```
 
-Open a clean recorded video, draw tightly around the face in the first frame,
+Open a clean recorded video, click the target's detected face box in the first frame,
 choose a tracked method, then press **Process video**. After processing, use the
 slider to review boxes and BPM availability. Each run saves three processing CSVs
 in a new subfolder; the source video is unchanged. This interface processes the
 base video directly, rather than loading the desktop crop/validity pair. See the
 [manual check](TESTING_GUIDE.md#recorded-facevitals-interface-check) before using it.
 No additional Python dependency or environment is required on this Windows setup.
+The selected detection designates the person; processing retains the documented
+centered 1.5x tracked ROI and NaN on loss. The legacy GUI backend is not substituted.
 
 The shared editable installation now loads this checkout, with the FaceRec
 installation preserved. From the FaceRec root, process a clean base video directly:

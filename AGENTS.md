@@ -47,13 +47,20 @@ adapter, tracked ROI variants and gap-aware pulse processing. The shared
 environment's editable FaceVitals install now points at this checkout; keep it in
 place. Current upstream `83c544e` has also been merged into the FaceVitals branch.
 The maintained `facevitals.recorded` Tk interface supports recorded input, target
-drawing and results review (local commit `9b4f7bb`); the legacy GUI remains read-only
+selection and results review (initial local commit `9b4f7bb`); the legacy GUI remains read-only
 and unchanged.
 See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,
 deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
 commits have not been pushed or merged; they are not upstream functionality.
 
 ## Tracker-specific boundaries
+
+- Preserve FaceVitals processing logic. Ask the user before departing from its
+  integration contract or changing ROI extraction, missing-frame handling,
+  filtering, windowing or BPM estimation. The user explicitly confirmed centered
+  1.5x tracked face ROIs and NaN on loss; do not add legacy pixel reuse or forehead
+  extraction implicitly. The current recorded UI uses the maintained pipeline,
+  not the legacy Kivy backend.
 
 - Python 3.12 and `pyproject.toml` define this component's installation. Keep shared
   pins aligned with FaceVitals; use the shared setup in `docs/DEPENDENCIES.md`.
