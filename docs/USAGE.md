@@ -36,7 +36,7 @@ python -m c3_tracker --source video --input "C:\videos\base.mp4" --record-pair -
 
 | Option | Default | Values and purpose |
 | --- | --- | --- |
-| `--confidence` | `0.65` | Number in `(0, 1]`; minimum detector confidence. |
+| `--confidence` | `0.65` | Number in `(0, 1]`; configured MediaPipe confidence argument. It is not an independently guaranteed floor on every returned score. |
 | `--model-selection` | `0` | MediaPipe detector: `0` short range, `1` full range. |
 | `--appearance-model` | `sface` | `sface` or `mobilenet`; appearance features used to associate detections with tracks. |
 | `--model-dir` | `.models` | Directory containing the verified SFace/YuNet weights. |
@@ -101,6 +101,15 @@ Currently the three normal log/metadata files are automatic; there is no
 `--no-logs` or minimal-output mode. Pair metadata can exist without MP4s if no
 valid target was selected. No output files need to be committed when integrating
 the tool into FaceVitals; recordings, run outputs and local datasets stay ignored.
+
+### Run folders and IDs
+
+Every initialized run creates a new subfolder, for example
+`results/20261104T091949_255208Z_80787d/`. The ID combines UTC date/time,
+microseconds and six random hexadecimal characters. Microseconds help distinguish
+near-simultaneous starts; they do not describe camera or physiological timing
+precision. The ID is unrelated to the selected track ID. `--output-dir exports`
+changes only the parent directory. Press O to open the current run folder.
 
 ## Controls and selected target
 
@@ -331,6 +340,11 @@ FaceRec checkout. They are excluded from the
 [runtime integration bundle](DEPENDENCIES.md#runtime-integration-export), along with
 all datasets, run results, weights and environments. Existing research commands
 continue to work in this checkout. No FaceVitals GUI changes are made by exporting.
+
+The exporter has its own `--list-files`, `--output-dir` and `--verify DIRECTORY`
+options; these belong after `python tools/export_runtime.py`, not after
+`python -m c3_tracker`. Verification checks a pristine bundle's inventory and
+hashes before transfer. See the linked integration guide for the full commands.
 
 ## Experiments and evaluation
 

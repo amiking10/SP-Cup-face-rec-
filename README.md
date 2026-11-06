@@ -85,7 +85,7 @@ gaps and collect a fresh valid window after the selected face returns.
 The GUI's forehead extractor can hold a previous ROI on misses and does not read
 `frame_validity.csv`. The paired-input consumers `facevitals.compare_pair` and
 `facevitals.paired_input` are local development work and are absent from the
-[upstream main snapshot reviewed on 4 November 2026](https://github.com/Technion-SIPL-SPcup27/facevitals/tree/4d92cc099b6644267511be70fb4542fe18748e3f).
+[upstream main snapshot reviewed on 6 November 2026](https://github.com/Technion-SIPL-SPcup27/facevitals/tree/cbbbc3af55f9529fcc8eef058adbd0aca9c0d196).
 Full-timeline GUI integration is pending. The tracker export does not itself
 calculate BPM.
 
@@ -136,6 +136,13 @@ For later FaceVitals integration, generate a
 It includes the desktop tool and its regression tests without dataset adapters,
 evaluation commands, local data or historical results. The research checkout
 remains intact; exporting does not modify FaceVitals or merge any files.
+
+The exporter can also check a pristine bundle with
+`python tools/export_runtime.py --verify build/runtime`. It rejects modified,
+missing or extra files. The [validation record](docs/VALIDATION.md) separates
+current Windows regression checks from earlier model and dataset measurements.
+FaceVitals code integration and validation of its GUI in the shared environment
+remain pending.
 
 - [Agent and integration instructions](AGENTS.md)
 - [Dependencies and development setup](docs/DEPENDENCIES.md)

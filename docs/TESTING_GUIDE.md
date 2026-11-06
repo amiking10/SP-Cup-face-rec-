@@ -1,12 +1,20 @@
 # C3 experiment and annotation protocol
 
+Use the Python 3.12 [shared setup](DEPENDENCIES.md) and select
+`.venv-shared\Scripts\python.exe`. Bare `python` below assumes that interpreter is
+activated. The desktop control checks apply to the runtime tool; dataset and offline
+evaluation commands require the full FaceRec research checkout. They are excluded
+from the [integration export](DEPENDENCIES.md#runtime-integration-export).
+This guide describes procedures, not evidence that every live trial has passed;
+completed checks are recorded in [VALIDATION.md](VALIDATION.md).
+
 ## Desktop controls and quick regression check
 
-Launch from the repository root with `.\.venv\Scripts\python.exe -m c3_tracker --source webcam`.
+Launch from the repository root with `.\.venv-shared\Scripts\python.exe -m c3_tracker --source webcam`.
 The normal display shows only confirmed tracks with a current face detection. Lost
 tracks remain in the CSV and selected-target LOST state, but their prediction boxes
 are hidden. Use `--debug-overlay` when investigating detections and stale tracks.
-The default detection threshold is now 0.65; use the same threshold when comparing runs.
+The configured detector confidence is 0.65; use the same setting when comparing runs.
 
 Click **Save [S/Space]**, or focus the tracking window and press S or Space. Look for
 the **Saved:** message at the bottom, then click **Open folder [O]** to find the PNG
@@ -148,7 +156,7 @@ the current annotated-target CSV does not provide that ground truth.
 For a short live failure recording, use:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker --source webcam --record --record-raw --diagnostics
+.\.venv-shared\Scripts\python.exe -m c3_tracker --source webcam --record --record-raw --diagnostics
 ```
 
 Select one face, reproduce a head turn or brief disappearance, then quit with Q.
@@ -161,7 +169,7 @@ It contains no embedding vectors. Do not estimate live identity thresholds from 
 annotated-video replay alone: boxes, text and compression can alter model outputs.
 
 ```powershell
-python -m pytest -q
+python -m pytest -q tests datasets/tests
 python -m c3_tracker --help
 python -m c3_tracker --source video --input "C:\videos\consented-test.mp4" --headless --record --max-frames 100
 python -m c3_tracker.evaluation results\RUN\tracking_log.csv
@@ -189,3 +197,17 @@ These verify detection, confirmation, predicted-only loss, same-ID return while 
 expiry without cross-ID reassignment, rejection of a second face occupying the selection's
 old position, three-frame selected return, end-to-end CSV/JSON output and MP4 decoding. They
 are still synthetic pipeline smoke checks, not evidence of real-person tracking accuracy.
+
+## Video-pair and integration checks
+
+Use a clean CFR input with `--source video --input "C:\videos\base.mp4" --record-pair`.
+Select a confirmed face and check both clean MP4s for matching starts, ends, FPS and
+frame counts. With default `stop`, loss must finalize both before the missing frame.
+With `--pair-loss-policy mark`, keep source time intact and verify invalid frames
+in `frame_validity.csv`; placeholders are never pulse samples. The existing FaceVitals
+GUI can open uninterrupted videos, but full-timeline CSV handling is pending.
+
+Before transferring a pristine source bundle, run
+`python tools/export_runtime.py --verify build/runtime`. Run its tests using the
+[export verification instructions](DEPENDENCIES.md#runtime-integration-export).
+Do not include local test outputs, caches or build artifacts in the integration.

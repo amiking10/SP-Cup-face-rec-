@@ -2,6 +2,12 @@
 
 [Dataset navigation](README.md) · [setup and video-aligned preparation](BENCHMARK_GUIDE.md)
 
+This is a historical diagnostic report, not a new result from the current Python
+3.12 environment. Counts, timings, source interval and measured revision below
+remain unchanged. The repeat command uses the shared environment and requires the
+full research checkout with benchmark extras; this adapter is not in the runtime
+integration bundle. Use the original run environment for exact reproduction.
+
 ## Scope and fixed protocol
 
 Actual AVA ActiveSpeaker validation video `053oq2xB3oU`, original seconds `[900,910)`,
@@ -125,7 +131,7 @@ threshold, and do not generalize ten seconds into full AVA accuracy.
 After the benchmark guide's AVA preparation, from PowerShell at the repository root:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --output results/ava_diagnostics_repeat --matrix --stage-diagnostics
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --output results/ava_diagnostics_repeat --matrix --stage-diagnostics
 ```
 
 Use a fresh output directory. Each condition adds `diagnostic_stages.csv`,

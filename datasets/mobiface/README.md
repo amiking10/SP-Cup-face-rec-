@@ -8,6 +8,12 @@ The native adapter reuses existing benchmark inference, exports, scoring and ove
 Data/media are not distributed in Git. The supplied toolkit was inspected, not executed;
 its train/test folders provide annotation CSVs, not source videos.
 
+This adapter belongs to the full research checkout, not the runtime integration
+bundle. Use Python 3.12 and `.venv-shared` with the
+[benchmark installation](../BENCHMARK_GUIDE.md#install-on-windows) for new commands.
+The validation section preserves the 30 October 2026 results and recorded Python
+3.11 environment; no dataset rerun accompanied the environment/documentation update.
+
 ## Verified layout and conventions
 
 ```text
@@ -47,7 +53,7 @@ Obtain matching media through an authorized method and retain acquisition, resol
 frame-clock and offset provenance. From the repository root in PowerShell:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate audit-mobiface --data-root datasets/data/raw/mobiface --output results/mobiface_annotation_audit.json
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate audit-mobiface --data-root datasets/data/raw/mobiface --output results/mobiface_annotation_audit.json
 ```
 
 This audits annotations only. It requires all metadata-listed files, loads no models
@@ -83,8 +89,8 @@ conversions or guessed trims need audited remapping. Preparation may use annotat
 to check alignment; future GT is never supplied to the tracker.
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate prepare-mobiface --manifest datasets/data/raw/mobiface/manifest.json --output datasets/data/processed/mobiface
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset mobiface --data-root datasets/data --output results/mobiface_repeat --annotate-video --stage-diagnostics --target-iou-thresholds 0.3,0.5,0.7
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate prepare-mobiface --manifest datasets/data/raw/mobiface/manifest.json --output datasets/data/processed/mobiface
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset mobiface --data-root datasets/data --output results/mobiface_repeat --annotate-video --stage-diagnostics --target-iou-thresholds 0.3,0.5,0.7
 ```
 
 Use fresh outputs. Preparation writes the common schema, provenance/hashes and official

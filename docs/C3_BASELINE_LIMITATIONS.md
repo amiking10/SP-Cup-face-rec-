@@ -1,5 +1,11 @@
 # C3 baseline limitations
 
+These limits apply to the current desktop/export tool. See the
+[usage reference](USAGE.md) for controls and output semantics and the
+[validation record](VALIDATION.md) for what was actually tested. Dataset reports
+retain their original environments and do not establish accuracy of every later
+dependency configuration.
+
 - MediaPipe detects faces, not whole people. Tiny/profile/poorly lit/occluded faces may be
   missed. A detection score is not a probability of correct identity association.
 - The default SFace backend compares aligned face descriptors within a run. It needs
@@ -40,8 +46,17 @@
 - Video timestamps assume constant frame rate. Webcam timestamps reflect processing-loop
   arrival, not sensor exposure time; dropped camera frames and I/O stalls are not reconstructed.
   OpenCV cannot reliably distinguish every truncated-video read failure from normal EOF.
+- The green capture ROI extends the detected face top by 20% before optional edge
+  adjustments. It can include hair/background and is not skin segmentation. Paired
+  export requires an existing CFR video and interactive selection. Default `stop`
+  mode ends both videos before first target loss; `mark` preserves missing intervals
+  with invalid placeholders. A pulse consumer must honor the validity CSV and reset
+  across gaps. The current [FaceVitals handoff](../README.md#facevitals-handoff)
+  does not provide that full-timeline GUI adapter.
 - CPU is supported; throughput depends on hardware, faces, capture, encoding and display.
-  The smoke benchmark is not a real-world performance promise. GPU and Windows remain local checks.
+  The smoke benchmark is not a real-world performance promise. Windows Python 3.12
+  regression/model checks are recorded in the validation guide; GPU execution and
+  sustained live-person performance remain unestablished.
 - Pinning older dependencies preserves this baseline API, with upstream deprecation warnings.
   DeepSORT uses upstream commit `3341f823ee0ad20aa58c906079a37f3d43b42bbe`, which
   fixes repeated insertion of stale appearance features on missed frames; its package

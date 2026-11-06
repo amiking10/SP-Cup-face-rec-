@@ -52,3 +52,14 @@ Check documentation links and described CLI options when editing guides. Record
 what was actually checked. New datasets, pilots and benchmarks require task scope;
 a documentation cleanup does not authorize them. Follow FaceVitals' contribution
 checks before a FaceVitals PR. Pushes and merges require the user's instruction.
+
+## Documentation maintenance
+
+Maintain the tracked root, `docs/` and `datasets/` Markdown files; generated bundles,
+local dataset documentation and other repository checkouts are separate artifacts.
+Keep CLI options in `docs/USAGE.md`, installation pins in `pyproject.toml`, validation
+history in `docs/VALIDATION.md`, and dataset evidence in its recorded reports.
+Distinguish current setup commands from historical measurements: retain recorded
+revisions, environments, denominators and limitations. Never relabel old results as
+a new run. Check local links and CLI examples after editing; regenerate a bundle
+into a new directory if its copied documentation needs updating.

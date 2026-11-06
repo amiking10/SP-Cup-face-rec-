@@ -76,20 +76,12 @@ This is a reviewable integration artifact. Porting the reusable library and desk
 interface into FaceVitals, updating its packaging, and validating its GUI are later
 steps. Do not merge the whole FaceRec checkout or copy a local output directory.
 
-Local verification on 4 November 2026: the complete checkout passed 184 tests
-(8 skipped). A built runtime wheel installed into an ignored verification directory
-passed 87 exported tests (5 opt-in model tests skipped), with isolated imports
-confirming that the benchmark package and both evaluators were absent. Reports
-are retained in `results/environment-alignment/runtime-cleanup-tests.xml` and
-`results/runtime-export-check/runtime-tests.xml`. The shared editable installation
-was preserved. No FaceVitals files were changed and no dataset pilots were run.
-
-Maintenance verification on 6 November 2026: the full checkout passed 190 tests
-(8 skipped), including clean-export verification and rejection of changed, missing
-or extra bundle files. `pip check` passed; 44 documentation links and all 29 CLI
-option names (including the help alias) were checked. The existing 30-file runtime
-bundle passed inventory/hash verification. The test report is retained in
-`results/repo-maintenance-20261106/full-tests.xml`.
+The [validation record](VALIDATION.md#windows-maintenance-checks-6-november-2026)
+contains the completed runtime/export checks and retained report paths. The
+committed-source bundle `build/runtime-20261106-191a59a/` is a local artifact, not
+part of Git. Existing bundles are snapshots: later source/documentation edits do
+not update them automatically. Export into a new directory when a newer copy is
+needed, then verify it before transfer.
 
 ## Shared FaceVitals install
 
@@ -113,6 +105,12 @@ and environment; there is no second FaceVitals venv. Editable installs keep the
 FaceVitals checkout and its legacy/submodule resources available. Keep that
 checkout in place. Recheck upstream `main` and resolve changes before choosing
 a newer revision; a snapshot match does not guarantee future pin compatibility.
+
+On 6 November 2026, GitHub `main` was reviewed again at
+[`cbbbc3a`](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/cbbbc3af55f9529fcc8eef058adbd0aca9c0d196/pyproject.toml).
+Its dependency configuration is unchanged from the tested snapshot above.
+This was a source review, not a new installation or full FaceVitals test run;
+the reproducible setup commands intentionally retain the tested revision.
 
 This installs FaceVitals' Python package and optional deep-learning dependencies.
 The legacy Kivy GUI has additional dependencies outside its `pyproject.toml`;
@@ -143,28 +141,14 @@ These are top-level pins, not a full transitive dependency lock. The environment
 alignment changes installation requirements, not tracking thresholds, ROI bounds,
 recording timestamps or pulse algorithms.
 
-## Verification on 4 November 2026
+## Verification history
 
-Installed FaceRec and the FaceVitals snapshot above, including `test,benchmark`
-and `dev,dl` extras respectively, in one fresh Windows Python 3.12.10 environment.
-Both pinned FaceVitals submodules were initialized. Existing environments and
-the neighboring FaceVitals research checkout were preserved.
-
-- `python -m pip check`: no broken requirements; both module entry points work.
-- `python -m pytest -q tests datasets/tests` in FaceRec: 177 passed, 8 skipped.
-- `C3_RUN_MODEL_TESTS=1` on `tests/test_models.py` and
-  `tests/test_benchmark_models.py`: all 6 passed, including SFace, MobileNet,
-  loss/reacquisition and headless recorded-video checks.
-- FaceVitals' full suite initially returned 333 passed, 3 skipped, 2 failures
-  and 72 setup errors. Both missing-ME-rPPG-model failures passed on recheck after
-  initializing that submodule. All 72 setup errors came from a MATLAB build
-  fixture; standalone `matlab -batch "disp(version)"` also exited with status 1.
-  The full FaceVitals suite therefore has **not** passed on this machine.
-
-Local install reports, resolved versions and JUnit results are retained under
-ignored `results/environment-alignment/`. Its isolated FaceVitals checkout backs
-the current editable install; keep it in place or reinstall from another verified
-checkout. No dataset pilot, accuracy evaluation or interactive GUI check was run.
+See [Windows environment and model checks](VALIDATION.md#windows-environment-and-model-checks-4-november-2026)
+for the original shared installation, model tests and MATLAB-related FaceVitals
+test failures. That history is not a claim that the GUI or the latest upstream
+snapshot has passed locally. The isolated FaceVitals checkout under ignored
+`results/environment-alignment/` backs the current editable install; keep it in
+place or reinstall from another verified checkout.
 
 ## Model files
 

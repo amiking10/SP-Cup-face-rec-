@@ -1,5 +1,58 @@
 # Implementation validation
 
+This record separates runtime/package regressions from historical model and
+dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
+[the testing guide](TESTING_GUIDE.md) for procedures, and
+[dataset reports](../datasets/README.md) for their original protocols and results.
+Passing installation or export tests is not evidence of tracking or BPM accuracy.
+
+## Windows maintenance checks: 6 November 2026
+
+Python 3.12.10 in `.venv-shared`, with the pins in `pyproject.toml`:
+
+- `python -m pytest -q tests datasets/tests`: 190 passed, 8 skipped. Report:
+  `results/repo-maintenance-20261106/full-tests.xml`.
+- `python -m pip check`: no broken requirements.
+- The desktop argument table was checked against all 29 option names, including
+  the help alias. Local documentation targets and anchors were checked.
+- `python tools/export_runtime.py --verify build/runtime`: the existing 30-file
+  bundle passed inventory and SHA256 checks. New regressions reject changed,
+  missing and extra files, including extra entries added to the manifest itself.
+- A fresh bundle generated from committed source `191a59a` was also verified under
+  `build/runtime-20261106-191a59a/`, with `source.dirty=false`.
+
+These checks did not run dataset pilots, modify FaceVitals or validate its GUI.
+The GitHub workflow is configured to check both runtime exports and the research
+checkout; these local results do not assert that a remote CI run passed.
+
+## Windows environment and model checks: 4 November 2026
+
+Installed FaceRec and FaceVitals snapshot
+[`4d92cc0`](https://github.com/Technion-SIPL-SPcup27/facevitals/tree/4d92cc099b6644267511be70fb4542fe18748e3f)
+in one Windows Python 3.12.10 environment, including tracker `test,benchmark` and
+FaceVitals `dev,dl` extras. Both pinned FaceVitals submodules were initialized.
+Existing environments and the neighboring research checkout were preserved.
+
+- Initial tracker regression run: 177 passed, 8 skipped.
+- `C3_RUN_MODEL_TESTS=1` on `tests/test_models.py` and
+  `tests/test_benchmark_models.py`: 6 passed, covering SFace, MobileNet,
+  loss/reacquisition and headless recorded-video artifacts.
+- After runtime/test separation: full checkout 184 passed, 8 skipped. A built wheel
+  installed into an ignored verification directory passed 87 exported tests, with
+  5 opt-in model tests skipped. Isolated imports confirmed the benchmark package
+  and both evaluators were absent. The shared editable installation was preserved.
+- FaceVitals' full suite initially returned 333 passed, 3 skipped, 2 failures and
+  72 setup errors. Both missing-ME-rPPG-model failures passed on recheck after that
+  submodule was initialized. All 72 setup errors came from a MATLAB build fixture;
+  standalone `matlab -batch "disp(version)"` also exited with status 1. The full
+  FaceVitals suite therefore did not pass on this machine.
+
+Install/version records and JUnit reports remain under ignored
+`results/environment-alignment/` and `results/runtime-export-check/`. These were
+regression checks, not new dataset accuracy evaluations or interactive GUI checks.
+
+## Historical Linux smoke check
+
 Historical environment: Linux x86_64, Python 3.11.17, CPU torch 2.5.1+cpu / torchvision 0.20.1+cpu.
 These were the pins at the time of this run. Current setup and shared-environment
 verification are in [Dependencies](DEPENDENCIES.md).
@@ -22,7 +75,7 @@ Executed:
 The short smoke run measured about 24 processing FPS with two CPU threads, excluding
 model initialization. This is a one-off pipeline check, not sustained performance evidence.
 
-Not executed: Windows installation, webcam capture, desktop click/key interactions,
+Not executed in this historical Linux run: Windows installation, webcam capture, desktop click/key interactions,
 GPU, consenting two-person stationary/crossing experiments, independent identity
 annotations or sustained benchmarks at all three resolutions. Follow TESTING_GUIDE.md
 on the intended PC; do not infer C3 success from sample-photo frames or unit tests.

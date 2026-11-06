@@ -7,6 +7,13 @@ An optional oracle experiment supplies ground-truth **boxes, never identities**,
 is reported separately. Synthetic tests establish infrastructure behavior, not real
 face-tracking performance.
 
+These commands require the full FaceRec research checkout. Dataset adapters,
+evaluation commands and benchmark extras are excluded from the
+[runtime integration bundle](../docs/DEPENDENCIES.md#runtime-integration-export).
+Current setup uses Python 3.12; historical dataset reports retain their recorded
+revisions and environments. Updating the environment does not reproduce or replace
+their results. For current regression checks see [validation](../docs/VALIDATION.md).
+
 ## Install on Windows
 
 From the repository root in PowerShell, using the Python 3.12 shared environment:
@@ -29,6 +36,8 @@ py -3.11 -m venv .metrics-venv
 Pass `--hota-python .metrics-venv\Scripts\python.exe` when running a benchmark.
 Without it HOTA is null with an explicit reason. TrackEval receives only post-inference
 metric inputs in a local subprocess; its dependencies never replace the tracker stack.
+This optional metrics environment is not needed for the desktop tracker, paired
+video export or the manual FaceVitals handoff.
 
 ## Dataset support and required files
 

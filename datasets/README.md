@@ -3,6 +3,12 @@
 Start here for dataset availability, preparation and measured evidence. Code and source
 provenance are distributed in Git; datasets, recordings, weights and results stay local.
 
+This directory belongs to the full FaceRec research checkout and is excluded from
+the [runtime integration export](../docs/DEPENDENCIES.md#runtime-integration-export).
+Use the Python 3.12 [shared environment](../docs/DEPENDENCIES.md) with benchmark
+extras for new runs. The table below records completed local work; it is not a fresh
+audit of downloaded media or a benchmark rerun under the current environment.
+
 ## Current support and local validation
 
 | Dataset | Local inputs / experiments | Supported scope and limits |
