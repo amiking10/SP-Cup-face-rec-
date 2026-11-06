@@ -92,6 +92,9 @@ Current upstream `83c544e` was subsequently merged; recorded interface commit
 `9b4f7bb` adds the Tk workflow described below.
 Commit `748a675` subsequently changes designation to clicking detected face boxes;
 it preserves the centered 1.5x ROI, NaN-on-loss policy and maintained processing.
+Commit `2a61670` adds the waveform/BPM plots and results displays described below,
+without backend changes. Its [validation record](VALIDATION.md#recorded-gui-signals-and-results-6-november-2026)
+includes full-suite and independent GUI checks.
 It is not vendored into FaceRec and has not
 been pushed or merged into FaceVitals. The legacy FaceRec snapshot is unchanged.
 
@@ -121,6 +124,13 @@ base video directly, rather than loading the desktop crop/validity pair. See the
 No additional Python dependency or environment is required on this Windows setup.
 The selected detection designates the person; processing retains the documented
 centered 1.5x tracked ROI and NaN on loss. The legacy GUI backend is not substituted.
+The **Signals** tab shows the existing pulse waveform and per-window BPM with
+missing data left as gaps; its red cursor follows the shared video slider. The
+large BPM/quality display clears during loss or unavailable output. The **Results**
+tab lists each window's time, BPM, quality and availability, plus the mean of
+accepted window BPMs (a display summary, not a different final HR estimator).
+Processing has an activity indicator and elapsed time. These are offline results;
+no percentage/ETA, cancellation, SpO2, HRV, respiration or stress backend was added.
 
 The shared editable installation now loads this checkout, with the FaceRec
 installation preserved. From the FaceRec root, process a clean base video directly:

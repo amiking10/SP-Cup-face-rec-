@@ -40,6 +40,16 @@ benchmark. From the FaceRec root, with the shared installation active:
    `toolbox-pbv@track`. A new run must use a different folder. Record any failure;
    visual checks do not establish BPM accuracy without a reference sensor.
 
+After processing, also check the **Signals** and **Results** tabs. The BVP waveform
+must retain missing intervals as gaps; BPM points/windows marked unavailable must
+not appear as valid measurements. Move the shared timeline slider and check that
+both plots' red cursor follows it and the large BPM/quality display clears during
+loss and collection. The Results table should match `processed_output.csv`; its
+mean is explicitly a summary of accepted window BPMs. Opening another video must
+clear the previous plots/table/metrics. The activity bar shows work in progress,
+not a measured completion percentage. These display checks do not change the
+underlying processing or add the legacy physiological estimates.
+
 This interface selects its target from frame zero, unlike the FaceRec desktop's
 click-during-playback selection. The preview never writes overlays into the source.
 The file paths and test videos stay local. See [Dependencies](DEPENDENCIES.md#local-facevitals-adapter-work)

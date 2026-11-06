@@ -146,6 +146,8 @@ see [adapter status and test commands](docs/DEPENDENCIES.md#local-facevitals-ada
 Missing intervals remain unavailable and restart the pulse window. A maintained
 recorded-video interface now adds detected-face selection and timeline review; see the
 [launch command](docs/DEPENDENCIES.md#local-facevitals-adapter-work).
+Its Signals and Results tabs show waveform/BPM graphs, window quality and a
+results summary from the existing processing outputs, without changing the algorithms.
 Live processing, deleted-ID recovery and scored dataset acceptance remain pending;
 this work is local and the legacy FaceVitals GUI is unchanged.
 

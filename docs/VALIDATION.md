@@ -6,6 +6,34 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## Recorded GUI signals and results: 6 November 2026
+
+Local FaceVitals commit `2a61670` adds display-only waveform/BPM plots, current
+BPM/quality, a window table and labelled accepted-window mean, plus an activity
+indicator and elapsed processing time. Video, Signals and Results use notebook
+tabs; the shared slider moves graph cursors without modifying processing results.
+
+- Tests first: new presentation-helper imports failed before implementation.
+- Full suite: 556 passed, 77 skipped, 7 upstream warnings. Report:
+  `results/facevitals-integration/gui-signals-full-python-tests.xml`.
+  One Tk error-path test skipped because its display was unavailable in that
+  full run; it passed in the independent focused suite of all 19 GUI tests.
+  Other optional-test limits and MATLAB PATH exclusion are unchanged.
+- Independent review found and resolved stale BPM/quality/cursors after preview
+  decode failure. A synthetic widget regression verifies they clear. No confirmed
+  major issue remained; this was engineering review, not formal PR approval.
+- Synthetic Signals/Results screenshots were rendered and visually inspected.
+  Local screenshots remain under `results/facevitals-integration/`; no participant
+  images or dataset recordings were used.
+- Health: no errors; the existing unverified paper-card warning remains. Whitespace
+  was checked. No dependencies, legacy sources or backend files changed.
+
+Waveform gaps are not interpolated. The summary mean is presentation of accepted
+window BPMs, not a new HR estimator. No SpO2, HRV, respiration, stress estimator,
+HeartPy finalization or processing cancellation was added. Tracking, 1.5x ROIs,
+NaN-on-loss, extraction, filtering and BPM windowing are unchanged. These changes
+remain local and unpublished; actual-video manual checks are still required.
+
 ## First-frame face selection: 6 November 2026
 
 Local FaceVitals commit `748a675` replaces manual rectangle drawing with detected

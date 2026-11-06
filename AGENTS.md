@@ -49,6 +49,9 @@ place. Current upstream `83c544e` has also been merged into the FaceVitals branc
 The maintained `facevitals.recorded` Tk interface supports recorded input, target
 selection and results review (initial local commit `9b4f7bb`); the legacy GUI remains read-only
 and unchanged.
+Local commit `2a61670` adds waveform/BPM plots and window-result displays from
+existing outputs; it does not add the legacy physiological estimators or alter
+processing. Preserve this distinction when describing GUI feature parity.
 See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,
 deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
 commits have not been pushed or merged; they are not upstream functionality.
