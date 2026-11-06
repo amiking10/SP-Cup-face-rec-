@@ -141,8 +141,9 @@ The exporter can also check a pristine bundle with
 `python tools/export_runtime.py --verify build/runtime`. It rejects modified,
 missing or extra files. The [validation record](docs/VALIDATION.md) separates
 current Windows regression checks from earlier model and dataset measurements.
-FaceVitals code integration and validation of its GUI in the shared environment
-remain pending.
+A first headless FaceVitals adapter is prepared in a separate local checkout;
+see [adapter status and test commands](docs/DEPENDENCIES.md#local-facevitals-adapter-work).
+ROI/BPM integration and validation of its GUI in the shared environment remain pending.
 
 - [Agent and integration instructions](AGENTS.md)
 - [Dependencies and development setup](docs/DEPENDENCIES.md)

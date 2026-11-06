@@ -30,3 +30,5 @@ results/
 .vscode/
 build/
 dist/
+# Isolated external checkouts used for FaceVitals integration; never vendor them here.
+/worktrees/

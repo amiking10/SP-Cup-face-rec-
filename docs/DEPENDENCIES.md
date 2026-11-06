@@ -83,6 +83,44 @@ part of Git. Existing bundles are snapshots: later source/documentation edits do
 not update them automatically. Export into a new directory when a newer copy is
 needed, then verify it before transfer.
 
+## Local FaceVitals adapter work
+
+The first adapter step is saved in a separate ignored FaceVitals checkout:
+`worktrees/facevitals-integration`, branch `amita/c3-tracker-adapter`, local commit
+`089db69`, based on upstream `cbbbc3a`. It is not vendored into FaceRec and has not
+been pushed or merged into FaceVitals. The legacy FaceRec snapshot is unchanged.
+
+The adapter provides `facevitals.tracking.track_target`: one centered-1.5x xywh box
+per decoded frame, with NaNs for unconfirmed/missing targets. It ports the runtime
+association core and adds first-frame designated selection and a separate automatic
+first-second policy. Deleted-ID recovery, ROI registration, signal-gap handling and
+GUI integration remain later steps. No scored dataset runs accompanied the port.
+
+From this FaceRec root, run the new checkout's focused tests with the existing
+shared interpreter; pytest uses that checkout's configured `src` import path:
+
+```powershell
+Push-Location worktrees/facevitals-integration
+..\..\.venv-shared\Scripts\python.exe -m pytest -q tests/test_tracking.py tests/test_tracking_association.py
+..\..\.venv-shared\Scripts\python.exe tools/repo_health.py
+Pop-Location
+```
+
+The final focused run passed 45 tests with one opt-in real-model test skipped;
+the real-model smoke check had also passed separately using existing verified
+weights. The full Python suite passed 403 tests with 76 optional checks skipped,
+before the final crossing regression was added; that added regression then passed
+separately and is included in the focused count. MATLAB was excluded from that
+test process's PATH because its installed executable fails standalone startup.
+MATLAB submission validation remains unverified. Repository health has no errors
+and one existing unverified paper-card warning. An independent precommit reviewer
+found no confirmed blocker; this is not formal PR approval.
+
+Reports and dependency resolution are local under `results/facevitals-integration/`.
+The shared editable installation was not replaced. Source/weight declarations were
+audited; redistribution/submission clearance remains pending as documented in the
+FaceVitals checkout's integration guide.
+
 ## Shared FaceVitals install
 
 The shared pins match FaceVitals GitHub `main` at

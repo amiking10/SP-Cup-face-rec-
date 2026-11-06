@@ -40,6 +40,14 @@ An actual FaceVitals implementation branch must start from its own current `main
 do not merge FaceRec's repository history into FaceVitals. This FaceRec branch
 records preparation, not a completed FaceVitals port or review.
 
+The first actual FaceVitals adapter is in the separate ignored checkout
+`worktrees/facevitals-integration`, branch `amita/c3-tracker-adapter`, based on
+upstream `cbbbc3a`. Local commit `089db69` implements only the headless box adapter.
+Run its tests from that checkout, using its `src` first; the shared environment's
+editable FaceVitals install still points at the earlier validation checkout.
+See `docs/DEPENDENCIES.md` for commands and remaining scope. The FaceVitals commit
+has not been pushed or merged; do not mistake it for upstream functionality.
+
 ## Tracker-specific boundaries
 
 - Python 3.12 and `pyproject.toml` define this component's installation. Keep shared
