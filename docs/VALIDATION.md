@@ -6,6 +6,33 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## FaceVitals tracked ROI integration: 6 November 2026
+
+Local FaceVitals branch `amita/c3-tracker-adapter`, commit `69f86df`, based on
+GitHub main `cbbbc3a`. Source is in ignored `worktrees/facevitals-integration`.
+
+- Full Python suite: 534 passed, 76 skipped; report
+  `results/facevitals-integration/roi-full-python-tests.xml`.
+- Final focused gap, extraction and process checks: 53 passed; report
+  `results/facevitals-integration/roi-final-focused-tests.xml`. This includes four
+  late invalid-designation cases added after full-suite collection.
+- Real-model smoke: 1 passed using existing verified weights, without downloads.
+- Synthetic video-to-BPM regression verifies the valid signal, missing intervals,
+  fresh windows after gaps and CSV output. Cache regressions cover changed model
+  contents, configuration and composite rendering inputs.
+- Independent precommit review found a composite cache invalidation bug; it was
+  fixed and covered by a regression. No confirmed blocker remained. This is
+  engineering review, not formal PR approval.
+- Repository health: no errors, one pre-existing unverified paper-card warning.
+- Shared editable install now loads this checkout, while FaceRec still loads its
+  own `src/`; dependency versions are unchanged and `pip check` passes.
+
+MATLAB was excluded from the test process's PATH because its installed executable
+fails standalone startup. Optional checks were skipped; MATLAB submission
+validation and GUI readiness remain unverified. No dataset benchmark or new
+accuracy measurement was run. Deleted-ID recovery and submission/licence clearance
+remain pending. The FaceVitals commits have not been pushed or merged.
+
 ## Windows maintenance checks: 6 November 2026
 
 Python 3.12.10 in `.venv-shared`, with the pins in `pyproject.toml`:

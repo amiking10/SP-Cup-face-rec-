@@ -42,11 +42,12 @@ records preparation, not a completed FaceVitals port or review.
 
 The first actual FaceVitals adapter is in the separate ignored checkout
 `worktrees/facevitals-integration`, branch `amita/c3-tracker-adapter`, based on
-upstream `cbbbc3a`. Local commit `089db69` implements only the headless box adapter.
-Run its tests from that checkout, using its `src` first; the shared environment's
-editable FaceVitals install still points at the earlier validation checkout.
-See `docs/DEPENDENCIES.md` for commands and remaining scope. The FaceVitals commit
-has not been pushed or merged; do not mistake it for upstream functionality.
+upstream `cbbbc3a`. Local commits `089db69` and `69f86df` implement the headless box
+adapter, tracked ROI variants and gap-aware pulse processing. The shared
+environment's editable FaceVitals install now points at this checkout; keep it in
+place. See `docs/DEPENDENCIES.md` for commands and remaining scope. GUI integration,
+deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
+commits have not been pushed or merged; they are not upstream functionality.
 
 ## Tracker-specific boundaries
 

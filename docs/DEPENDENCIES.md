@@ -85,39 +85,56 @@ needed, then verify it before transfer.
 
 ## Local FaceVitals adapter work
 
-The first adapter step is saved in a separate ignored FaceVitals checkout:
+The headless integration is saved in a separate ignored FaceVitals checkout:
 `worktrees/facevitals-integration`, branch `amita/c3-tracker-adapter`, local commit
-`089db69`, based on upstream `cbbbc3a`. It is not vendored into FaceRec and has not
+`69f86df` (following adapter commit `089db69`), based on upstream `cbbbc3a`.
+It is not vendored into FaceRec and has not
 been pushed or merged into FaceVitals. The legacy FaceRec snapshot is unchanged.
 
 The adapter provides `facevitals.tracking.track_target`: one centered-1.5x xywh box
 per decoded frame, with NaNs for unconfirmed/missing targets. It ports the runtime
 association core and adds first-frame designated selection and a separate automatic
-first-second policy. Deleted-ID recovery, ROI registration, signal-gap handling and
-GUI integration remain later steps. No scored dataset runs accompanied the port.
+first-second policy. Tracked mean, 72-pixel crop and grid ROI variants now feed
+FaceVitals pulse methods. Missing samples stay unavailable; each uninterrupted
+valid span starts fresh pulse processing on the original video clock. No predicted
+box or placeholder is passed to a pulse method. Deleted-ID recovery, GUI integration
+and scored dataset acceptance remain later steps. No dataset runs accompanied this step.
+
+The shared editable installation now loads this checkout, with the FaceRec
+installation preserved. From the FaceRec root, process a clean base video directly:
+
+```powershell
+.\.venv-shared\Scripts\python.exe -m facevitals.process "C:\videos\base.mp4" --pipeline toolbox-pos@track --init-box 100 80 160 180 --tracker-model-dir .models --out results/facevitals-designated
+.\.venv-shared\Scripts\python.exe -m facevitals.process "C:\videos\base.mp4" --pipeline toolbox-pos@track-auto --tracker-model-dir .models --out results/facevitals-auto
+```
+
+Replace the video path and example first-frame `X Y W H` coordinates with the
+intended face. Automatic mode chooses using the first second and takes no
+`--init-box`; it is a separate method variant. These commands use existing verified
+tracker weights in `.models/`. The headless path tracks the base video itself;
+it does not import desktop `frame_validity.csv` or require a paired crop video.
+Outputs include BPM windows and the actual sampled ROI bounds; unavailable
+windows have no BPM and are marked abstained. This does not change the GUI handoff.
 
 From this FaceRec root, run the new checkout's focused tests with the existing
 shared interpreter; pytest uses that checkout's configured `src` import path:
 
 ```powershell
 Push-Location worktrees/facevitals-integration
-..\..\.venv-shared\Scripts\python.exe -m pytest -q tests/test_tracking.py tests/test_tracking_association.py
+..\..\.venv-shared\Scripts\python.exe -m pytest -q tests/test_tracking_traces.py tests/test_tracked_signal.py tests/test_tracking_process.py
 ..\..\.venv-shared\Scripts\python.exe tools/repo_health.py
 Pop-Location
 ```
 
-The final focused run passed 45 tests with one opt-in real-model test skipped;
-the real-model smoke check had also passed separately using existing verified
-weights. The full Python suite passed 403 tests with 76 optional checks skipped,
-before the final crossing regression was added; that added regression then passed
-separately and is included in the focused count. MATLAB was excluded from that
-test process's PATH because its installed executable fails standalone startup.
-MATLAB submission validation remains unverified. Repository health has no errors
-and one existing unverified paper-card warning. An independent precommit reviewer
-found no confirmed blocker; this is not formal PR approval.
+The full Python suite passed 534 tests with 76 optional checks skipped. The final
+focused run passed 53 tests, including four late input-validation cases added after
+the full run. A real-model smoke check passed separately using existing verified
+weights. See the [validation record](VALIDATION.md#facevitals-tracked-roi-integration-6-november-2026)
+for report paths, optional-test limits and independent review.
 
 Reports and dependency resolution are local under `results/facevitals-integration/`.
-The shared editable installation was not replaced. Source/weight declarations were
+The shared editable installation was switched to this tested checkout without
+changing dependency versions; `pip check` passed. Source/weight declarations were
 audited; redistribution/submission clearance remains pending as documented in the
 FaceVitals checkout's integration guide.
 
@@ -147,8 +164,9 @@ a newer revision; a snapshot match does not guarantee future pin compatibility.
 On 6 November 2026, GitHub `main` was reviewed again at
 [`cbbbc3a`](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/cbbbc3af55f9529fcc8eef058adbd0aca9c0d196/pyproject.toml).
 Its dependency configuration is unchanged from the tested snapshot above.
-This was a source review, not a new installation or full FaceVitals test run;
-the reproducible setup commands intentionally retain the tested revision.
+The baseline setup commands intentionally retain the original tested revision.
+The newer local integration checkout and its separate test record are described
+above; activating it replaces the editable FaceVitals target, not the shared pins.
 
 This installs FaceVitals' Python package and optional deep-learning dependencies.
 The legacy Kivy GUI has additional dependencies outside its `pyproject.toml`;
@@ -185,8 +203,9 @@ See [Windows environment and model checks](VALIDATION.md#windows-environment-and
 for the original shared installation, model tests and MATLAB-related FaceVitals
 test failures. That history is not a claim that the GUI or the latest upstream
 snapshot has passed locally. The isolated FaceVitals checkout under ignored
-`results/environment-alignment/` backs the current editable install; keep it in
-place or reinstall from another verified checkout.
+`results/environment-alignment/` preserves the original validation source. The
+current editable install uses `worktrees/facevitals-integration`; keep that checkout
+in place or reinstall from another verified checkout.
 
 ## Model files
 
