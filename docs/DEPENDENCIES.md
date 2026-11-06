@@ -85,9 +85,11 @@ needed, then verify it before transfer.
 
 ## Local FaceVitals adapter work
 
-The headless integration is saved in a separate ignored FaceVitals checkout:
+The integration is saved in a separate ignored FaceVitals checkout:
 `worktrees/facevitals-integration`, branch `amita/c3-tracker-adapter`, local commit
 `69f86df` (following adapter commit `089db69`), based on upstream `cbbbc3a`.
+Current upstream `83c544e` was subsequently merged; recorded interface commit
+`9b4f7bb` adds the Tk workflow described below.
 It is not vendored into FaceRec and has not
 been pushed or merged into FaceVitals. The legacy FaceRec snapshot is unchanged.
 
@@ -97,8 +99,24 @@ association core and adds first-frame designated selection and a separate automa
 first-second policy. Tracked mean, 72-pixel crop and grid ROI variants now feed
 FaceVitals pulse methods. Missing samples stay unavailable; each uninterrupted
 valid span starts fresh pulse processing on the original video clock. No predicted
-box or placeholder is passed to a pulse method. Deleted-ID recovery, GUI integration
-and scored dataset acceptance remain later steps. No dataset runs accompanied this step.
+box or placeholder is passed to a pulse method. A maintained recorded-video Tk
+interface now calls this path with first-frame target drawing and timeline review.
+Deleted-ID recovery, live processing and scored dataset acceptance remain later
+steps. The read-only legacy GUI is unchanged. No dataset runs accompanied this step.
+
+Launch the recorded-video interface from the FaceRec root:
+
+```powershell
+.\.venv-shared\Scripts\python.exe -m facevitals.recorded --tracker-model-dir .models --output-dir results/facevitals-recorded
+```
+
+Open a clean recorded video, draw tightly around the face in the first frame,
+choose a tracked method, then press **Process video**. After processing, use the
+slider to review boxes and BPM availability. Each run saves three processing CSVs
+in a new subfolder; the source video is unchanged. This interface processes the
+base video directly, rather than loading the desktop crop/validity pair. See the
+[manual check](TESTING_GUIDE.md#recorded-facevitals-interface-check) before using it.
+No additional Python dependency or environment is required on this Windows setup.
 
 The shared editable installation now loads this checkout, with the FaceRec
 installation preserved. From the FaceRec root, process a clean base video directly:
@@ -131,6 +149,11 @@ focused run passed 53 tests, including four late input-validation cases added af
 the full run. A real-model smoke check passed separately using existing verified
 weights. See the [validation record](VALIDATION.md#facevitals-tracked-roi-integration-6-november-2026)
 for report paths, optional-test limits and independent review.
+
+After the current-main merge and recorded interface addition, the full suite
+passed 551 tests with 76 optional checks skipped. All 13 recorded-interface tests
+also passed independently, including real Tk widget checks with synthetic video.
+See the [recorded-interface validation](VALIDATION.md#facevitals-recorded-interface-6-november-2026).
 
 Reports and dependency resolution are local under `results/facevitals-integration/`.
 The shared editable installation was switched to this tested checkout without

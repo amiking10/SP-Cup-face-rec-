@@ -6,6 +6,32 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## FaceVitals recorded interface: 6 November 2026
+
+Local FaceVitals commit `9b4f7bb` adds recorded-video target drawing, background
+processing and timeline review. Upstream main `83c544e` was fetched, inspected and
+merged as `d864972` before this change; its additions were paper/backlog updates.
+
+- Tests were written first and failed because the new module did not yet exist.
+- Full Python suite: 551 passed, 76 skipped, 7 upstream warnings. Report:
+  `results/facevitals-integration/recorded-full-python-tests.xml`.
+- Independent focused run: all 13 recorded-interface tests passed, including real
+  Tk widgets driven with synthetic video. No participant video was processed.
+- Review found and resolved method-selector mislabeling and an EOF window display
+  boundary error, with regressions for both. No confirmed major issue remained.
+  This is precommit engineering review, not formal PR approval.
+- Repository health: no errors; the pre-existing unverified paper-card warning
+  remains. CLI help, changed Markdown file targets and whitespace were checked.
+
+The same shared Python environment loads the new module; no dependency was added.
+The legacy GUI, legacy branch and read-only third-party sources were preserved.
+MATLAB was excluded only from the test process's PATH, as in the preceding run;
+the skipped optional checks and submission validation are not claimed to pass.
+No dataset benchmark or new accuracy measurement was run. Actual-video desktop
+interaction remains a [manual check](TESTING_GUIDE.md#recorded-facevitals-interface-check).
+Live processing, recovery after ID expiry and dataset acceptance remain pending.
+These FaceVitals changes are local and have not been pushed or merged upstream.
+
 ## FaceVitals tracked ROI integration: 6 November 2026
 
 Local FaceVitals branch `amita/c3-tracker-adapter`, commit `69f86df`, based on

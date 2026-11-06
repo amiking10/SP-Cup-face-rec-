@@ -8,6 +8,41 @@ from the [integration export](DEPENDENCIES.md#runtime-integration-export).
 This guide describes procedures, not evidence that every live trial has passed;
 completed checks are recorded in [VALIDATION.md](VALIDATION.md).
 
+## Recorded FaceVitals interface check
+
+This checks the local integration checkout, not the legacy GUI or a dataset
+benchmark. From the FaceRec root, with the shared installation active:
+
+```powershell
+.\.venv-shared\Scripts\python.exe -m facevitals.recorded --tracker-model-dir .models --output-dir results/facevitals-recorded
+```
+
+1. Open a clean CFR video with the intended face visible in the first frame.
+   Prefer a clip long enough for a 10-second valid window before and after a
+   brief absence, with a second person staying visible during the absence.
+2. Draw a tight rectangle around the intended face and choose `toolbox-pos@track`.
+   Press **Process video** and wait for completion. The window should remain responsive.
+3. Move the timeline slider. Verify the green preview box follows the intended
+   person, disappears during loss, and never switches to the bystander. Initial
+   confirmation frames may be unavailable. The adapter uses a centered 1.5x box;
+   this differs from the desktop export's configurable forehead expansion.
+4. Confirm the status says **Face lost** during absence, **Collecting samples**
+   until a fresh valid window completes, then BPM or **BPM unavailable**. A short
+   video may legitimately produce no estimate. An expired ID can stay lost on return;
+   long-loss identity recovery is not implemented. Never count that as successful recovery.
+5. Inspect the printed-on-screen run folder: `processed_output.csv`,
+   `processed_bvp.csv` and `roi.csv`. Missing windows must have NaN BPM and
+   `abstained=1`; missing face rows must have NaN coordinates. Keep the source video
+   separate and unchanged. These CSVs are the output, not a new cropped MP4 pair.
+6. Open the source again to select another target or method, such as
+   `toolbox-pbv@track`. A new run must use a different folder. Record any failure;
+   visual checks do not establish BPM accuracy without a reference sensor.
+
+This interface selects its target from frame zero, unlike the FaceRec desktop's
+click-during-playback selection. The preview never writes overlays into the source.
+The file paths and test videos stay local. See [Dependencies](DEPENDENCIES.md#local-facevitals-adapter-work)
+for setup and [Validation](VALIDATION.md) for completed automated checks.
+
 ## Desktop controls and quick regression check
 
 Launch from the repository root with `.\.venv-shared\Scripts\python.exe -m c3_tracker --source webcam`.

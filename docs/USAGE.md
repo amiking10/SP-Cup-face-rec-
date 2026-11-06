@@ -240,9 +240,10 @@ placeholder, a held image, or a zero BPM as a physiological sample. A compatible
 consumer must preserve missing intervals, reset pulse state across gaps, and wait
 for a fresh valid analysis window after reacquisition.
 
-A separate local headless FaceVitals integration now tracks the clean base video
-directly and preserves these gaps during pulse processing. It does not read the
-desktop validity CSV or change the GUI. See [local integration commands](DEPENDENCIES.md#local-facevitals-adapter-work).
+A separate local FaceVitals integration now tracks the clean base video directly
+and preserves these gaps during pulse processing. Its maintained recorded-video
+interface adds target drawing and timeline review. It does not read the desktop
+validity CSV or change the legacy GUI. See [local integration commands](DEPENDENCIES.md#local-facevitals-adapter-work).
 
 `facevitals.compare_pair` and `facevitals.paired_input` have been used on a local
 integration branch; they are absent from the upstream `main` snapshot reviewed

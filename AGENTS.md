@@ -45,7 +45,11 @@ The first actual FaceVitals adapter is in the separate ignored checkout
 upstream `cbbbc3a`. Local commits `089db69` and `69f86df` implement the headless box
 adapter, tracked ROI variants and gap-aware pulse processing. The shared
 environment's editable FaceVitals install now points at this checkout; keep it in
-place. See `docs/DEPENDENCIES.md` for commands and remaining scope. GUI integration,
+place. Current upstream `83c544e` has also been merged into the FaceVitals branch.
+The maintained `facevitals.recorded` Tk interface supports recorded input, target
+drawing and results review (local commit `9b4f7bb`); the legacy GUI remains read-only
+and unchanged.
+See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,
 deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
 commits have not been pushed or merged; they are not upstream functionality.
 
