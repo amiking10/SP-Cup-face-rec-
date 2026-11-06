@@ -60,6 +60,9 @@ passing tests clear submission. See `docs/DEPENDENCIES.md` for the open gates.
 Local `193f738` implements A1 scoring, the all-faces baseline, L3 generation and
 frozen-run orchestration. Synthetic checks pass; real acceptance is still NOT RUN.
 The retained v0 lacks layouts and has insufficient common windows for some pairs.
+The 7 November timestamp audit proves the first-40-second construction cannot
+admit all 41 targets under A1. Proposed A2 (45-second, timestamp-selected source
+intervals) is awaiting approval; do not apply it or silently change data admission.
 Do not silently drop them or relax the approved rules. Long laptop jobs follow
 FaceVitals' evaluation skill; broader independent review remains required before merge.
 See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,

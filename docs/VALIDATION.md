@@ -6,6 +6,38 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## Dataset-window feasibility audit: 7 November 2026
+
+Read-only metadata audit against FaceVitals source `0fb12c1` and upstream `83c544e`.
+Candidate HR scoring remains NOT RUN. Source videos were not decoded or rendered,
+no model/ROI/filter/window logic changed and existing recipes were not modified.
+
+- All 41 stored source-gap masks match recalculation from their source timestamps.
+  Original ground-truth timestamp lines were separately checked for subjects 30
+  and 3 and match the stored arrays. Reference waveforms were not loaded or scored.
+- Under first-40-second input and A1's common masks, subject 30 has only two solo
+  L1 opportunities. Adding a bystander cannot increase that count. With the
+  current centered crossing, 28 of 41 targets have fewer than three solo L3
+  opportunities. Re-pairing alone cannot make the current construction complete.
+- Existing 12 failed L1 pairs are explained by the union of source-gap exclusions
+  plus the common warmup. Each pair's excluded window indices are retained locally.
+- All stored sources cover 45 seconds (minimum 46.234 seconds). A diagnostic using
+  45-second source intervals and deterministic timestamp-only starts finds a
+  source-feasible interval for all 41 and a source-gap-only 82-pair assignment.
+  HR separation, harmonic checks, lighting and actual matte geometry are not
+  established by that necessary-but-insufficient feasibility graph.
+- A2 is proposed in the FaceVitals preregistration, not applied. It keeps the
+  centered crossing and pulse/ROI/scoring settings but changes clip duration and
+  source starts. That requires explicit approval before implementation/generation.
+
+Evidence is local under `results/facevitals-integration/a1-window-feasibility-20261107/`:
+`summary.json`, `source_timing_check.json`, `invalid_pairs.json`,
+`proposed_a2_feasibility.json` and `provenance.json`. The latter records hashes
+of the audited recipes/arrays and source revision. Alternative timing/interval
+diagnostics were not applied or reported as a model result. No scored ledger run
+was fabricated. Processing code is unchanged; no new source-code regression run
+was needed for this read-only audit. Documentation health/whitespace were checked.
+
 ## A1 implementation and synthetic testing: 6 November 2026
 
 Approval committed in FaceVitals as `f81c2ff` before implementation; source
