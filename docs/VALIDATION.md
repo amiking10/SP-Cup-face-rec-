@@ -1,7 +1,8 @@
 # Implementation validation
 
-Environment: Linux x86_64, Python 3.11.17, CPU torch 2.5.1+cpu / torchvision 0.20.1+cpu.
-All runtime/test top-level versions match the pins documented in the README.
+Historical environment: Linux x86_64, Python 3.11.17, CPU torch 2.5.1+cpu / torchvision 0.20.1+cpu.
+These were the pins at the time of this run. Current setup and shared-environment
+verification are in [Dependencies](DEPENDENCIES.md).
 
 Executed:
 
