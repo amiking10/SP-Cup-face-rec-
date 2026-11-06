@@ -6,6 +6,46 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## C3 acceptance and licence preparation: 6 November 2026
+
+Local FaceVitals commit `b9922df`, against current upstream `83c544e`. This is
+engineering/readiness work, not a scored dataset run or completed licence clearance.
+
+- Metadata-only preflight inventories recipes/arrays by SHA256, source existence
+  and stats, common source-gap windows, pairing metadata and excluded subjects.
+  Its status is always NOT RUN / NOT ACCEPTANCE while audited prerequisites are
+  missing; it refuses to overwrite prior reports.
+- Existing local `v0`: 122 recipes, L0=41 and L1=81, both spanning 41 targets;
+  203 referenced source entries reachable, no per-recipe validation problems and
+  no excluded subject. L2/L3s are absent from this local inventory. Evidence:
+  `results/facevitals-integration/c3-preflight-v0-20261106/manifest.json` and
+  `readiness.json`. Source stats are not a replacement for final media-content hashes.
+- No video was decoded or rendered, no reference signal values were loaded and
+  no BPM scores were generated. Historical pilots/cohort outputs were retained;
+  none were relabelled as acceptance of the current port.
+- TDD red-to-green and independent focused review: 25 preflight tests passed.
+  Malformed subject/pairing metadata guards and presence checks for every person's
+  PPG key were added without reading those signals.
+- Full suite: 582 passed, 76 optional checks skipped, 7 upstream warnings. Report:
+  `results/facevitals-integration/acceptance-preparation-full-python-tests.xml`.
+  MATLAB was excluded from this test process's PATH as in the preceding runs;
+  submission validation is not claimed.
+- Health: no errors, existing unverified paper-card warning retained. Independent
+  review resolved the proposed bootstrap's zero-partner ambiguity. This was
+  precommit engineering review, not formal PR approval.
+
+The inactive H-C3-TRACK draft retains original thresholds and proposes A1 for
+explicit review: common opportunity-window coverage and defined capture/bootstrap
+statistics. The user authorized preparing an amendment, not activating it.
+Clean-source 40-second clips expose a 6/7 initial-coverage ceiling; source-gap
+exclusions can change that denominator. No processing change was made to hide it.
+Missing layouts, baseline and scoring implementation still prevent full acceptance.
+
+The licence audit verified primary-source declarations at exact dependency/model
+pins and recorded active model hashes plus unused bundled assets. FaceRec rights,
+DeepSORT provenance, toolbox use and final redistribution notices remain open;
+no allowlist was relaxed. These commits are local and unpublished.
+
 ## Recorded GUI signals and results: 6 November 2026
 
 Local FaceVitals commit `2a61670` adds display-only waveform/BPM plots, current

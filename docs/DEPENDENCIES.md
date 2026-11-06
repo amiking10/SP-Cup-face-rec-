@@ -175,6 +175,38 @@ changing dependency versions; `pip check` passed. Source/weight declarations wer
 audited; redistribution/submission clearance remains pending as documented in the
 FaceVitals checkout's integration guide.
 
+## C3 acceptance and licence preparation
+
+FaceVitals local commit `b9922df` adds a metadata-only preflight, an inactive
+`docs/prereg/H-C3-TRACK.md` draft with proposed amendment A1, and a source/model
+licence audit at `docs/methods/c3-tracker-licences.md` in the integration checkout.
+The user requested an amendment **for review**, not permission to apply it.
+
+The proposed amendment would use a common scoring-only warmup/source-gap/target
+visibility mask for all arms, while retaining full-timeline coverage and the
+original criteria separately. It also freezes proposed target-level capture and
+two-way bootstrap definitions. It changes no ROI, NaN-on-loss behavior, filtering,
+windowing or HR estimator. Explicit approval is required before implementation
+or scoring under that amendment. The original criteria have not been overwritten.
+
+From the FaceRec root, inspect a dataset version without scoring:
+
+```powershell
+.\.venv-shared\Scripts\python.exe worktrees/facevitals-integration/tools/c3_acceptance_preflight.py --data-root datasets/data/processed/c3_facevitals --version v0 --out results/facevitals-integration/c3-preflight-next
+```
+
+Use a new output folder; existing paths are refused. Exit 2 means incomplete
+prerequisites. This does not render/decode video or compute BPM. The saved local
+inventory found L0/L1 only, with 41 targets and 122 recipes. L2/L3s data, L3 generation,
+the average-all-faces baseline and the complete acceptance scorer remain missing.
+The current raw capture table is not an acceptance decision. No scored run was launched.
+
+Licence evidence is not submission clearance. FaceRec rights, the DeepSORT
+original-to-fork grant chain, toolbox intended-use terms and final package notices
+still require authorized decisions. Model/pipeline clearance allowlists were not
+changed. See [validation](VALIDATION.md#c3-acceptance-and-licence-preparation-6-november-2026)
+for the completed metadata and regression checks.
+
 ## Shared FaceVitals install
 
 The shared pins match FaceVitals GitHub `main` at

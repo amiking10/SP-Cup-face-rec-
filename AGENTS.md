@@ -52,6 +52,10 @@ and unchanged.
 Local commit `2a61670` adds waveform/BPM plots and window-result displays from
 existing outputs; it does not add the legacy physiological estimators or alter
 processing. Preserve this distinction when describing GUI feature parity.
+Local `b9922df` adds acceptance preflight and licence evidence. H-C3-TRACK/A1 is
+an inactive draft awaiting explicit review, not an approved scoring protocol.
+Metadata inventory is NOT RUN / NOT ACCEPTANCE; neither licence declarations nor
+passing tests clear submission. See `docs/DEPENDENCIES.md` for the open gates.
 See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,
 deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
 commits have not been pushed or merged; they are not upstream functionality.
