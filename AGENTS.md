@@ -18,6 +18,28 @@ FaceVitals checkout is not evidence of what upstream `main` currently supports.
 Keep shared skills and policies maintained upstream; record tracker-specific
 differences here. Once integrated, the FaceVitals root instructions also apply.
 
+## Integration working branch
+
+`legacy/facerec-standalone` preserves the working standalone tool at `ce9ed3a`.
+Keep that snapshot unchanged. Continue FaceRec integration preparation on
+`amita/facevitals-integration`; the earlier branches remain available.
+
+Use FaceVitals' current upstream procedures rather than copying their contents:
+
+| Work | Upstream procedure |
+| --- | --- |
+| Start or refresh an actual FaceVitals checkout | [spcup27-sync](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/.claude/skills/spcup27-sync/SKILL.md) |
+| Port the tracker as an ROI, with tests first | [spcup27-add-method](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/.claude/skills/spcup27-add-method/SKILL.md) and the [C3 integration contract](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/docs/methods/c3-tracker-integration.md) |
+| Review a completed FaceVitals branch/PR independently | [spcup27-pr-reviewer role](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/.claude/agents/spcup27-pr-reviewer.md); use a fresh review session with that file as its brief |
+| Register a future scored comparison before running it | [spcup27-preregister](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/.claude/skills/spcup27-preregister/SKILL.md), then [spcup27-evaluate](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/.claude/skills/spcup27-evaluate/SKILL.md) |
+| Finish changes to FaceVitals | [spcup27-maintain](https://github.com/Technion-SIPL-SPcup27/facevitals/blob/main/.claude/skills/spcup27-maintain/SKILL.md), its tests and repository health check |
+
+Read the applicable role/skill before using it. The reviewer reports findings and
+never merges or posts externally. Benchmark runs remain outside the initial port.
+An actual FaceVitals implementation branch must start from its own current `main`;
+do not merge FaceRec's repository history into FaceVitals. This FaceRec branch
+records preparation, not a completed FaceVitals port or review.
+
 ## Tracker-specific boundaries
 
 - Python 3.12 and `pyproject.toml` define this component's installation. Keep shared
