@@ -177,17 +177,18 @@ FaceVitals checkout's integration guide.
 
 ## C3 acceptance and licence preparation
 
-FaceVitals local commit `b9922df` adds a metadata-only preflight, an inactive
+FaceVitals local commit `b9922df` introduced a metadata-only preflight, an inactive
 `docs/prereg/H-C3-TRACK.md` draft with proposed amendment A1, and a source/model
 licence audit at `docs/methods/c3-tracker-licences.md` in the integration checkout.
-The user requested an amendment **for review**, not permission to apply it.
+The user subsequently approved A1 on 6 November 2026 for implementation. This does
+not clear licences or bypass missing code, validation and input prerequisites.
 
-The proposed amendment would use a common scoring-only warmup/source-gap/target
+The approved amendment uses a common scoring-only warmup/source-gap/target
 visibility mask for all arms, while retaining full-timeline coverage and the
 original criteria separately. It also freezes proposed target-level capture and
 two-way bootstrap definitions. It changes no ROI, NaN-on-loss behavior, filtering,
-windowing or HR estimator. Explicit approval is required before implementation
-or scoring under that amendment. The original criteria have not been overwritten.
+windowing or HR estimator. A1 approval is recorded before implementation/scoring;
+the original criteria have not been overwritten. No scored run has started.
 
 From the FaceRec root, inspect a dataset version without scoring:
 
@@ -197,8 +198,9 @@ From the FaceRec root, inspect a dataset version without scoring:
 
 Use a new output folder; existing paths are refused. Exit 2 means incomplete
 prerequisites. This does not render/decode video or compute BPM. The saved local
-inventory found L0/L1 only, with 41 targets and 122 recipes. L2/L3s data, L3 generation,
-the average-all-faces baseline and the complete acceptance scorer remain missing.
+inventory found L0/L1 only, with 41 targets and 122 recipes. L2/L3 data remain
+missing from that local version; generation, baseline and scoring code are now
+implemented as described below.
 The current raw capture table is not an acceptance decision. No scored run was launched.
 
 Licence evidence is not submission clearance. FaceRec rights, the DeepSORT
@@ -206,6 +208,40 @@ original-to-fork grant chain, toolbox intended-use terms and final package notic
 still require authorized decisions. Model/pipeline clearance allowlists were not
 changed. See [validation](VALIDATION.md#c3-acceptance-and-licence-preparation-6-november-2026)
 for the completed metadata and regression checks.
+
+## Running approved A1 testing
+
+FaceVitals checkpoint `193f738` implements the A1 scorer, all-detected-faces POS
+baseline, L3s/L3l trajectories and matte-derived visibility, and a build/freeze/run
+launcher. It reuses existing evaluation and pulse methods. The user approval was
+committed first as `f81c2ff`. Tests use synthetic cases; dataset acceptance is NOT RUN.
+
+From the FaceRec root, the laptop launch command is:
+
+```powershell
+& .\worktrees\facevitals-integration\tools\run_c3_acceptance.ps1 -Python .\.venv-shared\Scripts\python.exe -SourceRoot "D:\source_datasets" -DataRoot .\datasets\data\processed\c3_facevitals -TrackerModelDir .\.models -Version v2a1
+```
+
+Replace `SourceRoot` with the folder containing `UBFC-rPPG/DATASET_2` (the
+previously supplied WSL datasets folder is one local option). Source videos stay
+read-only; the data root gets a new recipe version. Existing L3 versions and
+input folders are refused. The launcher builds all five layouts, freezes hashes
+and eligibility, then scores only if the complete input gate passes. It does not
+install dependencies or download weights. Long runs belong in the user's terminal
+under the FaceVitals evaluation procedure. Runtime and disk use can be substantial.
+
+The current local v0 preparation is **not ready**: missing L2/L3 scenes and 12/81
+L1 pairs with fewer than three usable opportunity windows. Do not drop pairs,
+relax coverage, or reinterpret generation success as acceptance. A fresh complete
+cohort needs the same eligibility checks. Failed outputs are retained for inspection.
+
+After a scored run, review FaceVitals
+`results/E047-c3-track-acceptance/acceptance.md` and `acceptance.json`, its standard
+evaluation tables and ledger entries. `COMPLETED` describes execution; inspect the
+separate arm/layout PASS, FAIL, INVALID or INCOMPLETE verdicts. Original coverage
+and A1 coverage remain separate. Technical errors are recorded INVALID. Per-run
+render/trace caches stay local and must not be merged or shipped. Licence clearance
+and the final independent PR/submission review remain separate requirements.
 
 ## Shared FaceVitals install
 

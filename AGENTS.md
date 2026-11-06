@@ -52,10 +52,16 @@ and unchanged.
 Local commit `2a61670` adds waveform/BPM plots and window-result displays from
 existing outputs; it does not add the legacy physiological estimators or alter
 processing. Preserve this distinction when describing GUI feature parity.
-Local `b9922df` adds acceptance preflight and licence evidence. H-C3-TRACK/A1 is
-an inactive draft awaiting explicit review, not an approved scoring protocol.
+Local `b9922df` adds acceptance preflight and licence evidence. The user approved
+H-C3-TRACK/A1 on 6 November 2026 for implementation; scoring is still NOT RUN while
+complete eligible input data remain unavailable.
 Metadata inventory is NOT RUN / NOT ACCEPTANCE; neither licence declarations nor
 passing tests clear submission. See `docs/DEPENDENCIES.md` for the open gates.
+Local `193f738` implements A1 scoring, the all-faces baseline, L3 generation and
+frozen-run orchestration. Synthetic checks pass; real acceptance is still NOT RUN.
+The retained v0 lacks layouts and has insufficient common windows for some pairs.
+Do not silently drop them or relax the approved rules. Long laptop jobs follow
+FaceVitals' evaluation skill; broader independent review remains required before merge.
 See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,
 deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
 commits have not been pushed or merged; they are not upstream functionality.

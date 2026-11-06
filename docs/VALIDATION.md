@@ -6,6 +6,46 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## A1 implementation and synthetic testing: 6 November 2026
+
+Approval committed in FaceVitals as `f81c2ff` before implementation; source
+checkpoint `193f738`. Added the pure scorer, all-faces baseline, L3s/L3l rendering
+and frozen-input orchestration. No tracker, selected-face ROI, pulse formula,
+filter or existing pipeline's HR clock was changed. The all-faces method is a new
+explicitly named evaluation baseline, not a replacement for existing extraction.
+
+- Full suite: 647 passed, 77 skipped, 7 upstream warnings. Report:
+  `results/facevitals-integration/a1-implementation-release-tests.xml`.
+- A final preflight layout-detection fix was then covered by 65 focused scorer,
+  preflight and runner checks, all passed. Report:
+  `results/facevitals-integration/a1-final-focused-tests.xml`.
+- Planted data exercise PASS, FAIL, INVALID and INCOMPLETE; exact crossed-bootstrap
+  omission/redraw rules; source/visibility masks; NaN availability; CP bounds;
+  baseline-teeth gates; all 41 expected target IDs; immutable input hashes; and
+  preservation/logging of technical failures. An actual synthetic pulse passed
+  through the existing evaluator into A1 while original coverage remained failed.
+- L3 tests verify pixel-centre rasterization, alpha>=0.5 visibility, prescribed
+  short/long durations, deterministic trajectory replay, mismatched-mask rejection
+  and refusal to overwrite old L3 outputs. Only synthetic videos were rendered.
+- The all-faces baseline tests verify equal face weighting, existing POS reuse,
+  actual enlarged sample pixels and full-clock missing-frame behavior.
+- PowerShell launcher syntax and Python CLI help checked. Health: no errors,
+  existing unverified paper-card warning retained. Initial independent review
+  findings were fixed; a complete independent pre-merge review is still pending.
+
+On committed source, preparation checked the existing local v0 metadata and five
+model assets. It returned NOT RUN: missing acceptance layouts, inconsistent
+cross-layout sets and 12 of 81 L1 pairs with fewer than three opportunity windows.
+Evidence: `results/facevitals-integration/a1-existing-cohort-gate/inputs.json` and
+`readiness.json`. No real video was decoded and no candidate HR score was computed
+by this gate. Full source media hashes are deferred until metadata pass, so this
+is not a completed input freeze. No historical pilot was relabelled as a new run.
+
+Long laptop scoring uses the prepared user-terminal launcher under the evaluation
+skill; no IGUM connection or long dataset job was started here. Missing data
+eligibility, licence decisions, independent review and submission validation
+remain separate gates. MATLAB and optional-test limitations are unchanged.
+
 ## C3 acceptance and licence preparation: 6 November 2026
 
 Local FaceVitals commit `b9922df`, against current upstream `83c544e`. This is
