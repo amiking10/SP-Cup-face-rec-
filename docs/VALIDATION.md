@@ -38,6 +38,17 @@ This is input readiness, not scored performance or acceptance. Real first-frame
 detection, rendered occlusion geometry and candidate scoring remain pending.
 Long rendering/evaluation must run in the user's terminal per FaceVitals' skill.
 
+The first user-terminal full build (`v3a2-20261107-full`) stopped before reference
+pairing because the launcher passed PowerShell's provider-qualified UNC path to
+Python (`Microsoft.PowerShell.Core\FileSystem::...`). The retained result is
+INCOMPLETE with zero discovered sources, not an absent dataset or candidate
+failure. The launcher now uses `ProviderPath` for native-program arguments and
+checks that the source dataset folder is readable before generation. Direct path
+verification and an argument-recording launcher smoke test pass; the smoke test
+performs no generation or scoring. Retrying requires a fresh version name.
+Full regression after this launcher correction: **692 passed, 76 skipped**,
+report `results/facevitals-integration/a2-unc-launcher-regression.xml`.
+
 ## Dataset-window feasibility audit: 7 November 2026
 
 **Latest user decision:** "Approve A2 and continue", superseding the initial
