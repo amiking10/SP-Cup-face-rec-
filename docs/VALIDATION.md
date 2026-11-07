@@ -6,13 +6,46 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## A2 implementation: 7 November 2026
+
+FaceVitals approval `e20829a` precedes implementation `d45fb06`. A2 adds explicit
+45-second timestamp-only source selection, native frame/reference alignment,
+complete global pairing, protocol-specific freezing and a reference-only planning
+command. A1 remains the default. Independent local review required and verified
+exact-first-frame face detection and at most two partners per target. This is
+engineering review, not merge approval or acceptance.
+
+Initial full regression: **690 passed, 77 skipped**, report
+`results/facevitals-integration/a2-regression-20261107.xml`. Optional MATLAB checks
+were skipped with MATLAB removed from this test process's PATH because the local
+MATLAB executable cannot start; submission/MATLAB compatibility is not validated.
+Repository health passes with the existing unverified Bland/Altman paper warning.
+
+The first real metadata check (`v3a2-plan-20261107`) retained INCOMPLETE evidence:
+the new validator incorrectly rejected duplicate native timestamps in nine
+sources, before reading reference pulses. The correction preserves existing
+`frame_index_at` behavior without deduplicating or renumbering frames. Subsequent
+planning must use a new version; failed evidence remains under the data root.
+
+Correction committed as FaceVitals `df86ad0` after **692 passed, 76 skipped**
+(`results/facevitals-integration/a2-native-clock-regression-20261107.xml`). The new
+`v3a2-plan-20261107-nativeclock` reference-only check is **READY_FOR_RENDER**:
+all 41 targets, 81 valid pairs, maximum three uses per bystander. Subject starts
+were frozen before reference samples were read. No source video was decoded and
+no candidate BPM was estimated. Provenance and protocol-file hashes are retained
+at `results/facevitals-integration/a2-reference-readiness-20261107/readiness.json`.
+This is input readiness, not scored performance or acceptance. Real first-frame
+detection, rendered occlusion geometry and candidate scoring remain pending.
+Long rendering/evaluation must run in the user's terminal per FaceVitals' skill.
+
 ## Dataset-window feasibility audit: 7 November 2026
 
-**Recorded user decision:** "Keep 40 seconds; report incomplete." A2 was declined.
-Full-cohort acceptance is **INCOMPLETE** on dataset prerequisites; candidate HR
-scoring is **NOT RUN**, not a measured method failure. Source intervals, all 41
-target requirements, ROI, processing and thresholds remain unchanged. No 45-second
-replacement cohort or reduced-target acceptance run is authorized by this decision.
+**Latest user decision:** "Approve A2 and continue", superseding the initial
+"Keep 40 seconds; report incomplete." Approval was committed in FaceVitals as
+`e20829a` before implementation. The original first-40-second cohort remains
+**INCOMPLETE**. A2 authorizes 45-second timestamp-selected intervals with all 41
+targets and unchanged ROI, pulse processing and acceptance thresholds. Candidate
+scoring remains **NOT RUN** until the new input gates pass.
 
 Read-only metadata audit against FaceVitals source `0fb12c1` and upstream `83c544e`.
 Candidate HR scoring remains NOT RUN. Source videos were not decoded or rendered,
@@ -32,9 +65,10 @@ no model/ROI/filter/window logic changed and existing recipes were not modified.
   source-feasible interval for all 41 and a source-gap-only 82-pair assignment.
   HR separation, harmonic checks, lighting and actual matte geometry are not
   established by that necessary-but-insufficient feasibility graph.
-- A2 was proposed in the FaceVitals preregistration and then declined. It would keep the
+- A2 was proposed in the FaceVitals preregistration, initially declined, then approved. It keeps the
   centered crossing and pulse/ROI/scoring settings but changes clip duration and
-  source starts. It remains unapplied and is retained only as proposal history.
+  source starts. The timestamp audit below remains evidence about the original
+  construction, distinct from new A2 implementation and reference-pairing checks.
 
 Evidence is local under `results/facevitals-integration/a1-window-feasibility-20261107/`:
 `summary.json`, `source_timing_check.json`, `invalid_pairs.json`,

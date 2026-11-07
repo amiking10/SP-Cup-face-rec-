@@ -219,18 +219,22 @@ committed first as `f81c2ff`. Tests use synthetic cases; dataset acceptance is N
 **7 November readiness update:** do not launch the current first-40-second
 construction expecting a complete cohort. Timestamp checks show it cannot meet
 the three-window minimum for all 41 targets, even before candidate estimation.
-Proposed A2 in the FaceVitals preregistration uses 45-second clips and
+Approved A2 in the FaceVitals preregistration uses 45-second clips and
 deterministic timestamp-only source starts while keeping centered crossings and
-processing unchanged. The user declined A2 on 7 November: keep 40 seconds and
-report full-cohort acceptance **INCOMPLETE**, with E047 candidate scoring **NOT RUN**.
-The proposal is historical only; no duration/start change is active. Do not launch
-the current full-cohort job expecting a PASS or silently remove ineligible targets.
+processing unchanged. The user superseded the initial decline and approved A2 on
+7 November (FaceVitals approval commit `e20829a`). The original 40-second cohort
+remains **INCOMPLETE**. A2 must pass reference pairing and rendering gates before
+E047 candidate scoring, which remains **NOT RUN**. Do not remove ineligible targets.
+The committed A2 implementation (`df86ad0`) passes its reference-only planning
+gate with all 41 targets and 81 pairs. Use a fresh full-build version; the retained
+`v3a2-plan-20261107-nativeclock` folder contains planning evidence only. Exact
+first-frame detection and rendered geometry are still gates, not established facts.
 See the [feasibility audit](VALIDATION.md#dataset-window-feasibility-audit-7-november-2026).
 
 From the FaceRec root, the laptop launch command is:
 
 ```powershell
-& .\worktrees\facevitals-integration\tools\run_c3_acceptance.ps1 -Python .\.venv-shared\Scripts\python.exe -SourceRoot "D:\source_datasets" -DataRoot .\datasets\data\processed\c3_facevitals -TrackerModelDir .\.models -Version v2a1
+& .\worktrees\facevitals-integration\tools\run_c3_acceptance.ps1 -Python .\.venv-shared\Scripts\python.exe -SourceRoot "D:\source_datasets" -DataRoot .\datasets\data\processed\c3_facevitals -TrackerModelDir .\.models -Protocol A2 -Version v3a2
 ```
 
 Replace `SourceRoot` with the folder containing `UBFC-rPPG/DATASET_2` (the
