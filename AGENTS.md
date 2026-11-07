@@ -72,6 +72,13 @@ See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,
 deleted-ID recovery and scored dataset acceptance remain pending. These FaceVitals
 commits have not been pushed or merged; they are not upstream functionality.
 
+The user stopped full E047 for runtime cost on 7 November. All local outputs
+remain; `manual_stop.json` is operational evidence, not an acceptance report.
+E048a recovered three cached baseline traces under the preregistered descriptive
+partial check (`c35c63d`, report commit `b5712f6`). E048b compares those same three
+scenes with designated tracking and is NOT RUN. No full-cohort acceptance claim
+follows. See the latest partial-check record in `docs/VALIDATION.md`.
+
 ## Tracker-specific boundaries
 
 - Preserve FaceVitals processing logic. Ask the user before departing from its

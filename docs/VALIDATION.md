@@ -6,6 +6,31 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## Interrupted full run and cached partial check: 7 November 2026
+
+The user stopped `E047-c3-track-acceptance` for runtime cost. The verified worker
+was terminated after encoder interruption did not stop the evaluator. Retain its
+123 completed baseline caches, generated recipes and `manual_stop.json`. There
+is no standard acceptance report; full acceptance is NOT ESTABLISHED. Do not
+resume against the original input freeze without reviewing changed source and
+preregistration hashes.
+
+FaceVitals `c35c63d` preregisters a descriptive one-target, three-scene check
+(L0/L1/L3s, same partner), selected by numeric identity and existing-cache presence
+before new BPM results. `experiments/e048_c3_partial.py --baseline-only` recovered
+E048a in one second without rendering or inference. Its ledger-backed report is
+[here](../worktrees/facevitals-integration/results/E048a-c3-cached-baseline/summary.md),
+recorded in FaceVitals `b5712f6`: three clips / 21 windows / N=1, descriptive only.
+E048b designated-tracking comparison is prepared but NOT RUN. No pulse, ROI or
+window logic changed. The three-scene comparison uses a 12 GB render budget to
+retain all its renders. Full 41-target acceptance and licences remain pending.
+
+Validation: **694 passed, 76 skipped**; report
+`results/facevitals-integration/e048-partial-runner-final-regression.xml`.
+An initial run exposed a flaky substring assertion matching `999` inside a SHA;
+the replacement directly guards against reference-pulse reads. Initial failure
+report retained. Repository health has the existing unverified paper warning.
+
 ## A2 implementation: 7 November 2026
 
 FaceVitals approval `e20829a` precedes implementation `d45fb06`. A2 adds explicit
