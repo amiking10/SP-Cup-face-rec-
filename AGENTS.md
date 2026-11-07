@@ -61,8 +61,9 @@ Local `193f738` implements A1 scoring, the all-faces baseline, L3 generation and
 frozen-run orchestration. Synthetic checks pass; real acceptance is still NOT RUN.
 The retained v0 lacks layouts and has insufficient common windows for some pairs.
 The 7 November timestamp audit proves the first-40-second construction cannot
-admit all 41 targets under A1. Proposed A2 (45-second, timestamp-selected source
-intervals) is awaiting approval; do not apply it or silently change data admission.
+admit all 41 targets under A1. The user declined A2 on 7 November: keep 40-second
+intervals and report full-cohort acceptance INCOMPLETE; candidate scoring is NOT RUN.
+Do not apply A2, drop targets or silently change data admission/thresholds.
 Do not silently drop them or relax the approved rules. Long laptop jobs follow
 FaceVitals' evaluation skill; broader independent review remains required before merge.
 See `docs/DEPENDENCIES.md` for commands and remaining scope. Live processing,

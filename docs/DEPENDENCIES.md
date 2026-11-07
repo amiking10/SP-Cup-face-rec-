@@ -221,7 +221,10 @@ construction expecting a complete cohort. Timestamp checks show it cannot meet
 the three-window minimum for all 41 targets, even before candidate estimation.
 Proposed A2 in the FaceVitals preregistration uses 45-second clips and
 deterministic timestamp-only source starts while keeping centered crossings and
-processing unchanged. A2 is awaiting approval; no duration/start change is active.
+processing unchanged. The user declined A2 on 7 November: keep 40 seconds and
+report full-cohort acceptance **INCOMPLETE**, with E047 candidate scoring **NOT RUN**.
+The proposal is historical only; no duration/start change is active. Do not launch
+the current full-cohort job expecting a PASS or silently remove ineligible targets.
 See the [feasibility audit](VALIDATION.md#dataset-window-feasibility-audit-7-november-2026).
 
 From the FaceRec root, the laptop launch command is:

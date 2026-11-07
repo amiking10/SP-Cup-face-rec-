@@ -8,6 +8,12 @@ Passing installation or export tests is not evidence of tracking or BPM accuracy
 
 ## Dataset-window feasibility audit: 7 November 2026
 
+**Recorded user decision:** "Keep 40 seconds; report incomplete." A2 was declined.
+Full-cohort acceptance is **INCOMPLETE** on dataset prerequisites; candidate HR
+scoring is **NOT RUN**, not a measured method failure. Source intervals, all 41
+target requirements, ROI, processing and thresholds remain unchanged. No 45-second
+replacement cohort or reduced-target acceptance run is authorized by this decision.
+
 Read-only metadata audit against FaceVitals source `0fb12c1` and upstream `83c544e`.
 Candidate HR scoring remains NOT RUN. Source videos were not decoded or rendered,
 no model/ROI/filter/window logic changed and existing recipes were not modified.
@@ -26,9 +32,9 @@ no model/ROI/filter/window logic changed and existing recipes were not modified.
   source-feasible interval for all 41 and a source-gap-only 82-pair assignment.
   HR separation, harmonic checks, lighting and actual matte geometry are not
   established by that necessary-but-insufficient feasibility graph.
-- A2 is proposed in the FaceVitals preregistration, not applied. It keeps the
+- A2 was proposed in the FaceVitals preregistration and then declined. It would keep the
   centered crossing and pulse/ROI/scoring settings but changes clip duration and
-  source starts. That requires explicit approval before implementation/generation.
+  source starts. It remains unapplied and is retained only as proposal history.
 
 Evidence is local under `results/facevitals-integration/a1-window-feasibility-20261107/`:
 `summary.json`, `source_timing_check.json`, `invalid_pairs.json`,
