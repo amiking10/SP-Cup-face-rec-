@@ -76,8 +76,17 @@ The user stopped full E047 for runtime cost on 7 November. All local outputs
 remain; `manual_stop.json` is operational evidence, not an acceptance report.
 E048a recovered three cached baseline traces under the preregistered descriptive
 partial check (`c35c63d`, report commit `b5712f6`). E048b compares those same three
-scenes with designated tracking and is NOT RUN. No full-cohort acceptance claim
+scenes with designated tracking and completed; its unmatched window clocks prevent
+a valid paired comparison. No full-cohort acceptance claim
 follows. See the latest partial-check record in `docs/VALIDATION.md`.
+
+Final independent review on 8 November is BLOCKED, not merge approval. Current
+FaceVitals `3b189c7` records its findings and full dependency notices; `1b7767b`
+fixes prohibited-subject/exact-cohort admission. Full post-fix validation passed
+700 tests (76 skipped); independent follow-up verified the gate fix. Common-clock
+approval/verification and rights decisions remain open. The user explicitly said
+FaceRec ownership is uncertain; no MIT grant may be inferred. The licence audit
+contains a draft owner/team-lead request. Keep clearance registries unchanged.
 
 ## Tracker-specific boundaries
 

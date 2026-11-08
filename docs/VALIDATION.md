@@ -6,6 +6,42 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## Final licence and merge review: 8 November 2026
+
+**Verdict: BLOCKED.** GitHub upstream remains `83c544e`. Independent review of
+FaceVitals `b5712f6` ran in a detached source-first checkout: **692 passed,
+78 skipped**, health passed with the pre-existing paper-card warning, no merge
+conflicts, and no added participant media/models. Initial Git ownership failures
+were reproduced and resolved with a process-only safe-directory setting before
+the clean test run; no global Git settings were changed. Reports and synthetic
+clock/no-image reproductions remain at
+`results/facevitals-integration/final-review-20261108/`.
+
+The identified metadata admission defect is fixed in FaceVitals `1b7767b`:
+both prohibited identities are rejected as targets or bystanders; exact frozen
+target identities and bystander membership replace unsafe count-only admission.
+Tests first reproduced the failures. Post-fix **700 passed, 76 skipped**, with
+independent follow-up **50 focused tests passed**. Report:
+`results/facevitals-integration/final-review-20261108/root-fixed-gates-regression.xml`.
+The detached copy's extra skips include opt-in model checks unavailable there;
+optional MATLAB/Tk/end-to-end checks remain outside the tested scope.
+
+FaceVitals `3b189c7` preserves full pinned licence notices and the E048b
+ledger-backed report, updates current focus, and records remaining decisions.
+The user could not confirm FaceRec ownership; no grant was assigned. DeepSORT
+inherited-code and toolbox intended-use approvals remain unresolved; the
+[licence audit](../worktrees/facevitals-integration/docs/methods/c3-tracker-licences.md)
+contains the decision matrix and draft request. Model/pipeline allowlists are
+unchanged. A scoped installed-asset inventory is retained separately at
+`results/facevitals-integration/licence-review-20261108/installed-inventory.json`.
+
+The independent review also confirms incompatible baseline/tracked clocks affect
+both partial pairing and full acceptance scoring. A common-clock correction
+requires explicit approval before implementation; no ROI, signal processing,
+windowing or thresholds changed during this review. No merge/push/external request
+occurred. The clean disposable checkout was removed after its reports were saved;
+all benchmark outputs were retained.
+
 ## Interrupted full run and cached partial check: 7 November 2026
 
 The user stopped `E047-c3-track-acceptance` for runtime cost. The verified worker
@@ -21,7 +57,9 @@ before new BPM results. `experiments/e048_c3_partial.py --baseline-only` recover
 E048a in one second without rendering or inference. Its ledger-backed report is
 [here](../worktrees/facevitals-integration/results/E048a-c3-cached-baseline/summary.md),
 recorded in FaceVitals `b5712f6`: three clips / 21 windows / N=1, descriptive only.
-E048b designated-tracking comparison is prepared but NOT RUN. No pulse, ROI or
+E048b designated-tracking comparison completed, but no finite paired windows
+match because of the clock mismatch. Its marginal results are descriptive only.
+No pulse, ROI or
 window logic changed. The three-scene comparison uses a 12 GB render budget to
 retain all its renders. Full 41-target acceptance and licences remain pending.
 
