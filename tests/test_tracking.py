@@ -57,3 +57,31 @@ def test_embedding_reconfigures_yunet_only_when_frame_size_changes(monkeypatch):
     assert sizes==[(640,480),(320,320)]
     assert embedder.encode([],np.zeros((720,1280,3),np.uint8))==([],[])
     assert sizes==[(640,480),(320,320)]
+
+
+def test_sface_core_runs_without_importing_torch():
+    from pathlib import Path
+    import subprocess
+    import sys
+    source=Path(__file__).resolve().parents[1]/'src'
+    script='''
+import importlib.abc,sys
+sys.path.insert(0,sys.argv[1])
+class NoTorch(importlib.abc.MetaPathFinder):
+    def find_spec(self,fullname,path=None,target=None):
+        if fullname.split('.')[0] in ('torch','torchvision'):
+            raise AssertionError('SFace must not import '+fullname)
+sys.meta_path.insert(0,NoTorch())
+import numpy as np
+from c3_tracker import embedding
+class Embedder:
+    def __init__(self,*a): pass
+    def encode(self,detections,frame): return [],[]
+embedding.FaceEmbedder=Embedder
+from c3_tracker.tracking import FaceTracker
+tracker=FaceTracker()
+assert tracker.update([],np.zeros((32,32,3),np.uint8),timestamp=0.)==[]
+assert not any(name.split('.')[0] in ('torch','torchvision') for name in sys.modules)
+'''
+    result=subprocess.run([sys.executable,'-I','-c',script,str(source)],capture_output=True,text=True,timeout=60)
+    assert result.returncode==0,result.stdout+result.stderr

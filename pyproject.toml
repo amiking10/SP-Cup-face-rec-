@@ -5,22 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "c3-tracker"
 version = "0.1.0"
-description = "Measurable MediaPipe and DeepSORT multi-face tracking baseline"
+description = "Reusable MediaPipe, SFace and DeepSORT tracking core for FaceVitals"
 requires-python = "==3.12.*"
 dependencies = [
   "setuptools==80.10.2", "numpy==1.26.4", "scipy==1.17.1",
   "opencv-python==4.11.0.86", "opencv-contrib-python==4.11.0.86",
   "mediapipe==0.10.14",
-  "deep-sort-realtime @ https://github.com/levan92/deep_sort_realtime/archive/3341f823ee0ad20aa58c906079a37f3d43b42bbe.zip",
-  "torch==2.14.1", "torchvision==0.29.1"
+  "deep-sort-realtime @ https://github.com/levan92/deep_sort_realtime/archive/3341f823ee0ad20aa58c906079a37f3d43b42bbe.zip"
 ]
 
 [project.optional-dependencies]
 test = ["pytest==9.1.1"]
-benchmark = ["motmetrics==1.4.0", "pandas==2.2.3", "xmltodict==0.14.2"]
+mobilenet = ["torch==2.14.1", "torchvision==0.29.1"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["c3_tracker"]
+namespaces = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

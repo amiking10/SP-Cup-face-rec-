@@ -42,25 +42,9 @@ def download(directory):
         print(f'Installed: {path.resolve()}', flush=True)
 
 
-def download_test_fixture(directory):
-    path = Path(directory) / 'testdata' / 'other_face.jpg'
-    path.parent.mkdir(parents=True, exist_ok=True)
-    digest = '7de7ed51a1594fff247f4cae2301eceacf5313d6011e37b4a4c8733f7bb72c07'
-    if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == digest:
-        return
-    with urlopen('https://raw.githubusercontent.com/opencv/opencv/4.11.0/samples/data/lena.jpg', timeout=30) as response:
-        data = response.read()
-    if hashlib.sha256(data).hexdigest() != digest:
-        raise RuntimeError('OpenCV test fixture integrity check failed')
-    path.write_bytes(data)
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--download', action='store_true', required=True)
     parser.add_argument('--model-dir', type=Path, default=Path('.models'))
-    parser.add_argument('--test-fixtures', action='store_true', help='also fetch the public OpenCV sample for model regressions')
     args = parser.parse_args()
     download(args.model_dir)
-    if args.test_fixtures:
-        download_test_fixture(args.model_dir)

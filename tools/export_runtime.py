@@ -1,128 +1,63 @@
-"""Export the desktop tracker and its regression tests without research/data files."""
+"""Export and verify the small tracking core; never include local research or data."""
 import argparse
 import hashlib
 import json
 from pathlib import Path
 import subprocess
-import tomllib
-
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNTIME_MODULES = (
-    '__init__', '__main__', 'app', 'association', 'controls', 'detection',
-    'embedding', 'logging_utils', 'models', 'paired_recording', 'roi',
-    'target_manager', 'tracking', 'visualization',
-)
-RUNTIME_TESTS = (
-    'test_association', 'test_detection', 'test_desktop', 'test_inputs',
-    'test_logging', 'test_models', 'test_pair_mark', 'test_paired_recording',
-    'test_roi', 'test_target_manager', 'test_tracking',
-)
+RUNTIME_MODULES = ('__init__','association','detection','embedding','models','target_manager','tracking')
+RUNTIME_TESTS = ('test_association','test_detection','test_tracking','test_target_manager','test_models')
 COPIED_FILES = (
     *(f'src/c3_tracker/{name}.py' for name in RUNTIME_MODULES),
     *(f'tests/{name}.py' for name in RUNTIME_TESTS),
-    '.gitignore',
+    'pyproject.toml','.gitignore','docs/USAGE.md','docs/C3_BASELINE_LIMITATIONS.md',
 )
-GENERATED_FILES = ('pyproject.toml', 'README.md', 'docs/USAGE.md', 'runtime_manifest.json')
+GENERATED_FILES = ('README.md','runtime_manifest.json')
 
 
-def runtime_project(config):
-    """Keep canonical runtime/test pins without the research dependency extra."""
-    project = config['project']
-    lines = ['[build-system]']
-    for key, value in config['build-system'].items():
-        lines.append(f'{key} = {json.dumps(value)}')
-    lines.extend(['', '[project]'])
-    for key in ('name', 'version', 'description', 'requires-python', 'dependencies'):
-        lines.append(f'{key} = {json.dumps(project[key])}')
-    lines.extend([
-        '', '[project.optional-dependencies]',
-        f'test = {json.dumps(project["optional-dependencies"]["test"])}',
-        '', '[tool.setuptools.packages.find]', 'where = ["src"]',
-        '', '[tool.pytest.ini_options]', 'testpaths = ["tests"]', '',
-    ])
-    return '\n'.join(lines)
+def runtime_readme():
+    return """# FaceRec tracking-core export
+
+Use Python 3.12: `python -m pip install ".[test]"`, then `python -m pytest -q`.
+The default SFace tracker does not require Torch. Explicit model preparation:
+`python -m c3_tracker.models --download --model-dir .models`.
+
+See [the API and FaceVitals workflow](docs/USAGE.md) and
+[tracking limits](docs/C3_BASELINE_LIMITATIONS.md). The maintained FaceVitals
+implementation is on its
+[runtime branch](https://github.com/Technion-SIPL-SPcup27/facevitals/tree/amita/c3-runtime-integration).
+This export contains no desktop UI, dataset adapters, pulse methods, media or
+weights. `runtime_manifest.json` records the source revision and file hashes.
+Verify it using `tools/export_runtime.py --verify DIRECTORY` from the FaceRec
+source checkout; that build tool is not part of the runtime export.
+
+The [source archive](https://github.com/amiking10/SP-Cup-face-rec-/tree/archive/facerec-research-20261108)
+retains the previous full tool. Source/third-party redistribution permissions
+remain unresolved; this export grants no licence or submission approval.
+"""
 
 
-def runtime_readme(config):
-    dependencies = config['project']['dependencies']
-    cpu_pins = ' '.join(next(pin for pin in dependencies if pin.startswith(name + '=='))
-                        for name in ('torch', 'torchvision'))
-    return rf'''# FaceRec runtime integration bundle
-
-This bundle contains selected-face tracking, the desktop interface, paired video
-export and relevant regression tests. It is a reviewable source export for later
-FaceVitals integration; generating it does not modify or merge into FaceVitals.
-Dataset adapters, evaluation commands and historical results stay in FaceRec.
-
-## Install and run
-
-Use Python 3.12. Run from this bundle's root. For an existing shared Python 3.12
-environment, use its interpreter instead of creating another environment below.
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install {cpu_pins} --index-url https://download.pytorch.org/whl/cpu
-.\.venv\Scripts\python.exe -m pip install -e ".[test]"
-.\.venv\Scripts\python.exe -m c3_tracker.models --download
-.\.venv\Scripts\python.exe -m c3_tracker --source webcam
-```
-
-If `py` is unavailable, use the installed Python 3.12 executable to create the venv.
-Model downloads are explicit and hash-verified. Weights and test photographs are
-not included. Track IDs are associations within a run, not verified identities.
-
-## Export a clean video pair
-
-```powershell
-.\.venv\Scripts\python.exe -m c3_tracker --source video --input "C:\videos\base.mp4" --record-pair --output-dir exports
-```
-
-Use a clean constant-frame-rate file. Click a confirmed face to select it. Recording
-starts with the first valid selection. Q quits, R resets, S/Space saves a screenshot,
-and O opens the output folder. The green capture box extends 20% above the detected
-face by default; the four ROI options adjust it further. It is not a skin mask.
-
-Outputs are `exports/<run-id>/original.mp4`, `face_centered.mp4`,
-`paired_recording.json` and `frame_validity.csv`, plus the usual run logs. The MP4s
-share the source FPS and interval, have no audio and contain no drawn overlays.
-With the default `stop` loss policy both videos stop and save at first target loss.
-Webcam paired recording and headless target selection are not supported.
-
-Open each uninterrupted MP4 manually in FaceVitals' existing GUI to process it.
-`--pair-loss-policy mark` keeps missing intervals as invalid FACE LOST frames;
-it requires a consumer that reads the validity CSV, resets pulse processing at gaps
-and waits for a fresh valid window after return. The current GUI does not read
-that CSV. This bundle does not calculate BPM or add that GUI integration.
-
-See the [option and output tables](docs/USAGE.md) for every desktop CLI argument.
-
-## Verify the runtime
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -q
-.\.venv\Scripts\python.exe -m pip check
-```
-
-Model tests are opt-in with `C3_RUN_MODEL_TESTS=1`. They also need the explicit
-`python -m c3_tracker.models --download --test-fixtures` setup. Ordinary tests
-use synthetic pixels/mocks and do not download models or datasets. Passing tests
-does not establish identity or pulse accuracy. GPU execution is not validated.
-
-`runtime_manifest.json` lists SHA256 hashes, the source Git commit when available,
-and whether the source tree had uncommitted changes. This is a selected export,
-not the complete research checkout. Keep runtime outputs outside Git.
-'''
-
-
-def runtime_usage(text):
-    # Reuse the maintained tables instead of maintaining another CLI reference.
-    start = text.index('## Command-line options\n')
-    end = text.index('## Controls and selected target\n', start)
-    tables = text[start:end].replace(
-        '(../datasets/BENCHMARK_GUIDE.md)',
-        '(https://github.com/amiking10/SP-Cup-face-rec-/blob/main/datasets/BENCHMARK_GUIDE.md)')
-    return '# FaceRec runtime reference\n\nSee [installation and recording](../README.md).\n\n' + tables
+def export_runtime(destination, source_root=ROOT):
+    root=Path(source_root).resolve()
+    destination=Path(destination).absolute()
+    if destination.exists():
+        raise FileExistsError(f'Existing export is retained: {destination}')
+    files={relative:(root/relative).read_bytes() for relative in COPIED_FILES}
+    files['README.md']=runtime_readme().encode('utf-8')
+    manifest={
+        'schema_version':1,'purpose':'FaceRec tracking-core source export',
+        'source':source_revision(root),
+        'source_pyproject_sha256':hashlib.sha256(files['pyproject.toml']).hexdigest(),
+        'files':{name:hashlib.sha256(data).hexdigest() for name,data in sorted(files.items())},
+    }
+    files['runtime_manifest.json']=(json.dumps(manifest,indent=2)+'\n').encode('utf-8')
+    destination.mkdir(parents=True)
+    for relative,data in files.items():
+        target=destination/relative
+        target.parent.mkdir(parents=True,exist_ok=True)
+        target.write_bytes(data)
+    return manifest
 
 
 def source_revision(root):
@@ -134,37 +69,6 @@ def source_revision(root):
         return {'commit': commit.stdout.strip(), 'dirty': bool(status.stdout.strip())}
     except (OSError, subprocess.SubprocessError):
         return {'commit': None, 'dirty': None}
-
-
-def export_runtime(destination, *, source_root=ROOT):
-    root = Path(source_root).resolve()
-    destination = Path(destination).absolute()
-    if destination.exists() or destination.is_symlink():
-        raise FileExistsError(f'Export destination already exists; choose a new folder: {destination}')
-    files = {}
-    for relative in COPIED_FILES:
-        path = root / relative
-        if path.is_symlink() or not path.resolve().is_relative_to(root):
-            raise ValueError(f'Export source must be a regular file inside the repository: {relative}')
-        files[relative] = path.read_bytes()
-    project_bytes = (root / 'pyproject.toml').read_bytes()
-    config = tomllib.loads(project_bytes.decode('utf-8'))
-    files['pyproject.toml'] = runtime_project(config).encode('utf-8')
-    files['README.md'] = runtime_readme(config).encode('utf-8')
-    files['docs/USAGE.md'] = runtime_usage((root / 'docs/USAGE.md').read_text(encoding='utf-8')).encode('utf-8')
-    manifest = {
-        'schema_version': 1, 'purpose': 'FaceRec runtime integration bundle',
-        'source': source_revision(root),
-        'source_pyproject_sha256': hashlib.sha256(project_bytes).hexdigest(),
-        'files': {name: hashlib.sha256(data).hexdigest() for name, data in sorted(files.items())},
-    }
-    files['runtime_manifest.json'] = (json.dumps(manifest, indent=2) + '\n').encode('utf-8')
-    destination.mkdir(parents=True)
-    for relative, data in files.items():
-        target = destination / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(data)
-    return manifest
 
 
 def verify_runtime(directory):

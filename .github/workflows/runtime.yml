@@ -1,0 +1,22 @@
+name: FaceRec core checks
+on: [push, pull_request]
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -e ".[test]"
+      - run: python -m pytest -q
+      - run: python tools/export_runtime.py --output-dir build/core
+      - run: python tools/export_runtime.py --verify build/core
+      - name: Install and test the exported core independently
+        run: |
+          python -m venv build/core-env
+          build/core-env/bin/python -m pip install './build/core[test]'
+          cd build/core
+          ../core-env/bin/python -I -m pytest -q
+          ../core-env/bin/python -m pip check

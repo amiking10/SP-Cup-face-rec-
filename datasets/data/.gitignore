@@ -1,3 +1,0 @@
-# Never commit datasets, recordings, or participant faces.
-*
-!.gitignore

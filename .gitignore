@@ -7,6 +7,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 results/
+/datasets/
 # Suggested local input/export directories, including their CSV/JSON sidecars.
 /recordings/
 /exports/
