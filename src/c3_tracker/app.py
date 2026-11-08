@@ -207,11 +207,13 @@ def run(args):
                                                top=args.roi_top, bottom=args.roi_bottom,
                                                left=args.roi_left, right=args.roi_right)
             elapsed = time.perf_counter() - wall_start
-            image = annotate(frame, detections, observations, target,
-                             frames / elapsed if elapsed > 0 else 0, debug=args.debug_overlay,
-                             capture_roi=capture_roi)
-            if not args.headless:
-                controls.draw(image)
+            image = None
+            if not args.headless or writer is not None:
+                image = annotate(frame, detections, observations, target,
+                                 frames / elapsed if elapsed > 0 else 0, debug=args.debug_overlay,
+                                 capture_roi=capture_roi)
+                if not args.headless:
+                    controls.draw(image)
             latency = (time.perf_counter() - started) * 1000 + read_ms
             latencies.append(latency)
             logger.log_frame(frames, timestamp, observations, target, latency, capture_roi=capture_roi)

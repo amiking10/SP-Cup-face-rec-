@@ -322,6 +322,12 @@ on an annotated recording can change alignment and embeddings, so that replay ca
 reconstruct the original live rejection reliably. Both videos are finalized when you quit
 with Q. The source recording and extra logging add I/O work; compare like-for-like settings.
 
+Headless runs without `--record` skip overlay drawing and its frame copy. Tracking,
+timestamps and CSV logging still run for every frame. With `--record`, headless
+runs continue to generate the annotated MP4. SFace/YuNet retains its configured
+input size until frame dimensions change; detection and embedding still run on
+every applicable frame. No frame skipping or resizing is introduced.
+
 Capture FPS is metadata, **not measured processing FPS**. Processing latency includes
 read + detection + tracking + annotation (first frame is pre-read before model loading).
 It excludes CSV, video encoding, and GUI waiting. End-to-end FPS includes these loop

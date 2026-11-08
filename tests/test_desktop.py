@@ -11,6 +11,38 @@ from c3_tracker.tracking import Observation
 from c3_tracker.visualization import annotate
 
 
+@pytest.mark.parametrize('record',[False,True])
+def test_headless_only_renders_when_recording(tmp_path,monkeypatch,record):
+    from c3_tracker import app
+    from types import SimpleNamespace
+    frames=[np.full((64,64,3),value,np.uint8) for value in (70,90)]
+    pending=iter([(True,frame) for frame in frames]+[(False,None)])
+    capture=SimpleNamespace(read=lambda:next(pending),get=lambda _:30.,release=lambda:None)
+    monkeypatch.setattr(app,'open_capture',lambda _:capture)
+    monkeypatch.setattr(app,'FaceDetector',lambda *a:SimpleNamespace(detect=lambda f:[],close=lambda:None))
+    monkeypatch.setattr(app,'FaceTracker',lambda *a,**k:SimpleNamespace(update=lambda *a,**k:[]))
+    rendered=[]
+    encoded=[]
+    def render(frame,*a,**k):
+        assert record, 'Headless analysis must not copy or draw frames without an annotated writer'
+        rendered.append(frame)
+        return np.full_like(frame,123)
+    monkeypatch.setattr(app,'annotate',render)
+    monkeypatch.setattr(app.cv2,'VideoWriter',lambda *a:SimpleNamespace(
+        isOpened=lambda:True,write=lambda image:encoded.append(image.copy()),release=lambda:None))
+    options=['--source','video','--input','unused.mp4','--headless','--output-dir',str(tmp_path)]
+    assert app.main(options+(['--record'] if record else []))==0
+    run,=tmp_path.iterdir()
+    with (run/'tracking_log.csv').open() as stream:
+        rows=list(csv.DictReader(stream))
+    assert [int(row['frame_index']) for row in rows]==[0,1]
+    assert [float(row['video_timestamp_s']) for row in rows]==pytest.approx([0,1/30])
+    assert len(rendered)==len(encoded)==(2 if record else 0)
+    assert all(np.all(image==123) for image in encoded)
+    assert np.all(frames[0]==70) and np.all(frames[1]==90)
+    assert json.loads((run/'summary.json').read_text())['frames_processed']==2
+
+
 def test_screenshot_png_and_feedback_with_unicode_directory(tmp_path, capsys):
     directory = tmp_path / '\u05ea\u05de\u05d5\u05e0\u05d5\u05ea'
     directory.mkdir()

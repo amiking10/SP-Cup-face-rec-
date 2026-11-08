@@ -6,8 +6,9 @@ from .models import model_path
 
 class FaceEmbedder:
     def __init__(self, directory=None):
+        self._input_size = (320, 320)
         self.detector = cv2.FaceDetectorYN.create(
-            str(model_path('face_detection_yunet_2023mar.onnx', directory)), '', (320, 320), .8, .3)
+            str(model_path('face_detection_yunet_2023mar.onnx', directory)), '', self._input_size, .8, .3)
         self.recognizer = cv2.FaceRecognizerSF.create(
             str(model_path('face_recognition_sface_2021dec.onnx', directory)), '')
 
@@ -15,7 +16,9 @@ class FaceEmbedder:
         if not detections:
             return [], []
         height, width = frame.shape[:2]
-        self.detector.setInputSize((width, height))
+        if (width, height) != self._input_size:
+            self.detector.setInputSize((width, height))
+            self._input_size = (width, height)
         _, faces = self.detector.detect(frame)
         if faces is None:
             return [], []

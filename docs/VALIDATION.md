@@ -6,6 +6,27 @@ dataset measurements. Use [Dependencies](DEPENDENCIES.md) for the current setup,
 [dataset reports](../datasets/README.md) for their original protocols and results.
 Passing installation or export tests is not evidence of tracking or BPM accuracy.
 
+## FaceRec runtime optimization: 8 November 2026
+
+On the FaceRec integration-preparation branch only, headless runs without an
+annotated writer now skip overlay drawing and the full-frame copy. Headless
+recording still draws/writes annotated frames. YuNet input dimensions are updated
+only when the frame size changes, preserving initial 320x320 setup and dynamic
+resolution handling. No detector thresholds, association rules, ROI geometry,
+recorded pixels, frame sampling or logging schema changed. The separate
+FaceVitals checkout and its timing/licence blockers were not modified.
+
+Tests first reproduced unnecessary rendering/configuration calls. Final FaceRec
+suite: **189 passed, 8 skipped**, report
+`results/facevitals-integration/facerec-optimization-20261108.xml`. Regression
+fixtures verify unchanged source pixels, all-frame logs/source timestamps,
+annotated headless recordings, identical normalized embeddings and changing
+resolutions. Standalone exported runtime: **90 passed, 5 skipped**, with imports
+verified from its own `src` and no research-package fallback; report
+`results/facevitals-integration/facerec-optimized-runtime-20261108.xml`.
+These checks demonstrate avoided work and behavior preservation, not a measured
+end-to-end FPS gain. No new dataset or pulse-estimation experiment was run.
+
 ## Final licence and merge review: 8 November 2026
 
 **Verdict: BLOCKED.** GitHub upstream remains `83c544e`. Independent review of
