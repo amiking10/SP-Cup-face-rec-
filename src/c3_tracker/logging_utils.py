@@ -10,7 +10,8 @@ from uuid import uuid4
 FIELDS = ["frame_index", "video_timestamp_s", "track_id", "is_target", "left", "top",
           "right", "bottom", "has_detection", "confirmed", "target_visible",
           "target_lost", "target_status", "selected_target_id", "detection_confidence",
-          "processing_latency_ms"]
+          "processing_latency_ms", "capture_roi_left", "capture_roi_top",
+          "capture_roi_right", "capture_roi_bottom"]
 
 
 def write_json(path, value):
@@ -51,7 +52,7 @@ class RunLogger:
             self.diagnostics_file.write(json.dumps(row, allow_nan=False) + '\n')
             self.diagnostics_file.flush()
 
-    def log_frame(self, index, timestamp, observations, target, latency_ms):
+    def log_frame(self, index, timestamp, observations, target, latency_ms, capture_roi=None):
         for o in observations or [None]:
             row = dict(frame_index=index, video_timestamp_s=timestamp,
                        track_id=o.track_id if o else "", is_target=int(bool(o and o.track_id == target.target_id)),
@@ -61,6 +62,10 @@ class RunLogger:
                        detection_confidence=o.detection_confidence if o else None,
                        processing_latency_ms=latency_ms)
             row.update(zip(("left", "top", "right", "bottom"), o.bbox if o else (None,) * 4))
+            valid_roi = capture_roi if (o and o.track_id == target.target_id and
+                                       o.observed and o.confirmed and target.visible) else None
+            row.update(zip(("capture_roi_left", "capture_roi_top", "capture_roi_right", "capture_roi_bottom"),
+                           valid_roi if valid_roi is not None else (None,) * 4))
             self.writer.writerow(row)
         self.file.flush()
 

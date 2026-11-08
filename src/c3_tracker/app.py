@@ -12,6 +12,8 @@ from .target_manager import TargetManager
 from .visualization import annotate
 from .logging_utils import RunLogger
 from .controls import Controls
+from .roi import DEFAULT_TOP_EXTENSION, selected_capture_roi, validate_roi_margins
+from .paired_recording import PairedRecorder
 
 WINDOW = "C3 face tracking"
 
@@ -37,6 +39,13 @@ def positive_seconds(value):
     return number
 
 
+def roi_margin(value):
+    number = float(value)
+    if not math.isfinite(number) or not -1 <= number <= 1:
+        raise argparse.ArgumentTypeError("must be a finite fraction in [-1, 1]")
+    return number
+
+
 def parser():
     p = argparse.ArgumentParser(description="MediaPipe + DeepSORT C3 baseline")
     p.add_argument("--source", choices=("webcam", "video"), required=True)
@@ -55,9 +64,17 @@ def parser():
     p.add_argument("--appearance-model", choices=('sface', 'mobilenet'), default='sface')
     p.add_argument("--model-dir", type=Path, default=Path('.models'))
     p.add_argument("--model-selection", type=int, choices=(0, 1), default=0)
+    for side in ('top', 'bottom', 'left', 'right'):
+        basis = 'height' if side in ('top', 'bottom') else 'width'
+        p.add_argument(f"--roi-{side}", type=roi_margin, default=0.0,
+                       help=f"adjust {side} edge by a fraction of the new default box {basis}; positive expands, negative trims (default: 0; default top already 20%% higher)")
     p.add_argument("--gpu", action="store_true", help="use CUDA with the optional MobileNet backend; SFace uses CPU")
     p.add_argument("--record", action="store_true")
     p.add_argument("--record-raw", action="store_true", help="also save source_video.mp4 without overlays; requires --record")
+    p.add_argument("--record-pair", action="store_true",
+                   help="CFR video input only: save synchronized original.mp4 and face_centered.mp4 from selection; see --pair-loss-policy")
+    p.add_argument('--pair-loss-policy', choices=('stop', 'mark'), default='stop',
+                   help='stop: save at first loss; mark: keep full timeline with FACE LOST placeholders and a validity CSV')
     p.add_argument("--diagnostics", action="store_true", help="log exact selection-rejection reasons and distances; no embeddings")
     p.add_argument("--output-dir", type=Path, default=Path("results"))
     p.add_argument("--headless", action="store_true", help="no display or mouse selection")
@@ -87,12 +104,17 @@ def open_capture(args):
 
 
 def run(args):
+    validate_roi_margins(args.roi_top, args.roi_bottom, args.roi_left, args.roi_right)
+    if args.pair_loss_policy != 'stop' and not args.record_pair:
+        raise ValueError('--pair-loss-policy mark requires --record-pair')
     if args.record_raw and not args.record:
         raise ValueError('--record-raw requires --record')
+    if args.record_pair and (args.source != 'video' or args.headless):
+        raise ValueError('--record-pair requires --source video and an interactive window for target selection')
     if args.headless and args.source == "webcam" and args.max_frames is None:
         raise ValueError("Headless webcam runs require --max-frames")
     cap = open_capture(args)
-    detector = logger = writer = raw_writer = None
+    detector = logger = writer = raw_writer = pair = None
     latencies = []
     target = TargetManager()
     observations = []
@@ -100,6 +122,7 @@ def run(args):
     previous_lost = False
     error = None
     wall_start = None
+    stop_reason = 'end_of_input'
     try:
         ok, frame = cap.read()
         if not ok:
@@ -131,9 +154,24 @@ def run(args):
                            "matching_checks": "appearance gates before assignment; selected return before duplicates",
                            "competitors": "distinct simultaneously observed faces, not arbitrary stale raw IDs",
                            "return_confirmation_frames": 3},
-            "recording_fps": (reported_fps or 30.0) if args.record else None})
+            "capture_roi": {"default_top_extension": DEFAULT_TOP_EXTENSION,
+                            "margins": {side: getattr(args, f'roi_{side}') for side in ('top', 'bottom', 'left', 'right')},
+                            "definition": "selected observed face; default top 20% higher, then four outward-positive margins relative to new default dimensions before clipping; integer xyxy with exclusive right/bottom",
+                            "valid_when": "selected target visible AND observation confirmed AND has current detection",
+                            "skin_mask": False},
+            "recording_fps": (reported_fps or 30.0) if args.record or args.record_pair else None})
         print(f"Results: {logger.directory.resolve()}", flush=True)
         controls = Controls(logger.directory)
+        if args.record_pair:
+            pair = PairedRecorder(logger.directory, reported_fps, args.input, (width, height),
+                                  {side: getattr(args, f'roi_{side}') for side in ('top', 'bottom', 'left', 'right')},
+                                  loss_policy=args.pair_loss_policy)
+            print('Pair waiting: click a confirmed face to start both videos.', flush=True)
+
+        def stop_pair(reason):
+            if pair is not None and pair.status == 'recording':
+                pair.finish(reason)
+                controls.notify('Pair saved: ' + reason.replace('_', ' '))
         if args.record:
             if reported_fps is None:
                 warnings.warn("Camera did not report FPS; recording uses 30 FPS, not measured throughput")
@@ -153,6 +191,8 @@ def run(args):
                 if event == cv2.EVENT_LBUTTONDOWN:
                     if not controls.click(x, y):
                         if target.select(x, y, observations):
+                            if pair is not None and pair.target_id is not None and target.target_id != pair.target_id:
+                                stop_pair('target_changed')
                             tracker.protect_target(target.target_id)
             cv2.setMouseCallback(WINDOW, mouse)
         wall_start = time.perf_counter()
@@ -163,14 +203,24 @@ def run(args):
             detections = detector.detect(frame)
             observations = tracker.update(detections, frame, timestamp=timestamp)
             target.update(observations)
+            capture_roi = selected_capture_roi(observations, target, frame.shape[1], frame.shape[0],
+                                               top=args.roi_top, bottom=args.roi_bottom,
+                                               left=args.roi_left, right=args.roi_right)
             elapsed = time.perf_counter() - wall_start
             image = annotate(frame, detections, observations, target,
-                             frames / elapsed if elapsed > 0 else 0, debug=args.debug_overlay)
+                             frames / elapsed if elapsed > 0 else 0, debug=args.debug_overlay,
+                             capture_roi=capture_roi)
             if not args.headless:
                 controls.draw(image)
             latency = (time.perf_counter() - started) * 1000 + read_ms
             latencies.append(latency)
-            logger.log_frame(frames, timestamp, observations, target, latency)
+            logger.log_frame(frames, timestamp, observations, target, latency, capture_roi=capture_roi)
+            if pair is not None and pair.status in ('waiting', 'recording'):
+                previous_pair_status = pair.status
+                pair.update(frame, frames, target.target_id, target.visible, capture_roi,
+                            float(cap.get(cv2.CAP_PROP_POS_MSEC)) / 1000)
+                if pair.status != previous_pair_status:
+                    controls.notify('Recording pair' if pair.status == 'recording' else 'Pair saved: recording stopped')
             if args.diagnostics:
                 logger.log_diagnostics(frames, timestamp, tracker.diagnostics())
             visible += int(target.visible)
@@ -189,8 +239,10 @@ def run(args):
                 cv2.imshow(WINDOW, image)
                 key = cv2.waitKey(1) & 0xFF
                 if key in (ord("q"), ord("Q")) or cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
+                    stop_reason = 'user_quit'
                     break
                 if key in (ord("r"), ord("R")):
+                    stop_pair('selection_reset')
                     target.reset()
                     tracker.protect_target(None)
                 if key in (ord("s"), ord("S"), ord(" ")):
@@ -200,6 +252,7 @@ def run(args):
                 if controls.save_requested:
                     controls.save(image, frames - 1)
             if args.max_frames and frames >= args.max_frames:
+                stop_reason = 'max_frames'
                 break
             read_start = time.perf_counter()
             ok, frame = cap.read()
@@ -208,9 +261,18 @@ def run(args):
                 raise RuntimeError("Camera stopped yielding frames")
     except BaseException as exc:
         error = f"{type(exc).__name__}: {exc}"
+        stop_reason = 'interrupted' if isinstance(exc, KeyboardInterrupt) else 'run_error'
         raise
     finally:
         elapsed = time.perf_counter() - wall_start if wall_start is not None else 0
+        finalization_error = None
+        if pair is not None:
+            try:
+                pair.finish(stop_reason)
+            except Exception as exc:
+                if error is None:
+                    error = f"{type(exc).__name__}: {exc}"
+                    finalization_error = exc
         cap.release()
         if detector is not None:
             detector.close()
@@ -227,7 +289,10 @@ def run(args):
                           "latency_p95_ms": float(np.percentile(latencies, 95)) if latencies else None,
                           "target_visible_frames": visible, "target_lost_frames": lost,
                           "target_loss_events": loss_events, "error": error,
+                          "paired_recording_status": pair.status if pair is not None else None,
                           "identity_metrics": "Not calculated: requires independent person annotations"})
+        if finalization_error is not None:
+            raise finalization_error
 
 
 def main(argv=None):

@@ -1,12 +1,67 @@
 # C3 experiment and annotation protocol
 
+Use the Python 3.12 [shared setup](DEPENDENCIES.md) and select
+`.venv-shared\Scripts\python.exe`. Bare `python` below assumes that interpreter is
+activated. The desktop control checks apply to the runtime tool; dataset and offline
+evaluation commands require the full FaceRec research checkout. They are excluded
+from the [integration export](DEPENDENCIES.md#runtime-integration-export).
+This guide describes procedures, not evidence that every live trial has passed;
+completed checks are recorded in [VALIDATION.md](VALIDATION.md).
+
+## Recorded FaceVitals interface check
+
+This checks the local integration checkout, not the legacy GUI or a dataset
+benchmark. From the FaceRec root, with the shared installation active:
+
+```powershell
+.\.venv-shared\Scripts\python.exe -m facevitals.recorded --tracker-model-dir .models --output-dir results/facevitals-recorded
+```
+
+1. Open a clean CFR video with the intended face visible in the first frame.
+   Prefer a clip long enough for a 10-second valid window before and after a
+   brief absence, with a second person staying visible during the absence.
+2. Check that the first frame shows face boxes. Click the intended face box; it
+   turns green. Processing must remain disabled without a selected detection.
+   Choose `toolbox-pos@track`.
+   Press **Process video** and wait for completion. The window should remain responsive.
+3. Move the timeline slider. Verify the green preview box follows the intended
+   person, disappears during loss, and never switches to the bystander. Initial
+   confirmation frames may be unavailable. The adapter uses a centered 1.5x box;
+   this differs from the desktop export's configurable forehead expansion.
+4. Confirm the status says **Face lost** during absence, **Collecting samples**
+   until a fresh valid window completes, then BPM or **BPM unavailable**. A short
+   video may legitimately produce no estimate. An expired ID can stay lost on return;
+   long-loss identity recovery is not implemented. Never count that as successful recovery.
+5. Inspect the printed-on-screen run folder: `processed_output.csv`,
+   `processed_bvp.csv` and `roi.csv`. Missing windows must have NaN BPM and
+   `abstained=1`; missing face rows must have NaN coordinates. Keep the source video
+   separate and unchanged. These CSVs are the output, not a new cropped MP4 pair.
+6. Open the source again to select another target or method, such as
+   `toolbox-pbv@track`. A new run must use a different folder. Record any failure;
+   visual checks do not establish BPM accuracy without a reference sensor.
+
+After processing, also check the **Signals** and **Results** tabs. The BVP waveform
+must retain missing intervals as gaps; BPM points/windows marked unavailable must
+not appear as valid measurements. Move the shared timeline slider and check that
+both plots' red cursor follows it and the large BPM/quality display clears during
+loss and collection. The Results table should match `processed_output.csv`; its
+mean is explicitly a summary of accepted window BPMs. Opening another video must
+clear the previous plots/table/metrics. The activity bar shows work in progress,
+not a measured completion percentage. These display checks do not change the
+underlying processing or add the legacy physiological estimates.
+
+This interface selects its target from frame zero, unlike the FaceRec desktop's
+click-during-playback selection. The preview never writes overlays into the source.
+The file paths and test videos stay local. See [Dependencies](DEPENDENCIES.md#local-facevitals-adapter-work)
+for setup and [Validation](VALIDATION.md) for completed automated checks.
+
 ## Desktop controls and quick regression check
 
-Launch from the repository root with `.\.venv\Scripts\python.exe -m c3_tracker --source webcam`.
+Launch from the repository root with `.\.venv-shared\Scripts\python.exe -m c3_tracker --source webcam`.
 The normal display shows only confirmed tracks with a current face detection. Lost
 tracks remain in the CSV and selected-target LOST state, but their prediction boxes
 are hidden. Use `--debug-overlay` when investigating detections and stale tracks.
-The default detection threshold is now 0.65; use the same threshold when comparing runs.
+The configured detector confidence is 0.65; use the same setting when comparing runs.
 
 Click **Save [S/Space]**, or focus the tracking window and press S or Space. Look for
 the **Saved:** message at the bottom, then click **Open folder [O]** to find the PNG
@@ -148,7 +203,7 @@ the current annotated-target CSV does not provide that ground truth.
 For a short live failure recording, use:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker --source webcam --record --record-raw --diagnostics
+.\.venv-shared\Scripts\python.exe -m c3_tracker --source webcam --record --record-raw --diagnostics
 ```
 
 Select one face, reproduce a head turn or brief disappearance, then quit with Q.
@@ -161,7 +216,7 @@ It contains no embedding vectors. Do not estimate live identity thresholds from 
 annotated-video replay alone: boxes, text and compression can alter model outputs.
 
 ```powershell
-python -m pytest -q
+python -m pytest -q tests datasets/tests
 python -m c3_tracker --help
 python -m c3_tracker --source video --input "C:\videos\consented-test.mp4" --headless --record --max-frames 100
 python -m c3_tracker.evaluation results\RUN\tracking_log.csv
@@ -189,3 +244,17 @@ These verify detection, confirmation, predicted-only loss, same-ID return while 
 expiry without cross-ID reassignment, rejection of a second face occupying the selection's
 old position, three-frame selected return, end-to-end CSV/JSON output and MP4 decoding. They
 are still synthetic pipeline smoke checks, not evidence of real-person tracking accuracy.
+
+## Video-pair and integration checks
+
+Use a clean CFR input with `--source video --input "C:\videos\base.mp4" --record-pair`.
+Select a confirmed face and check both clean MP4s for matching starts, ends, FPS and
+frame counts. With default `stop`, loss must finalize both before the missing frame.
+With `--pair-loss-policy mark`, keep source time intact and verify invalid frames
+in `frame_validity.csv`; placeholders are never pulse samples. The existing FaceVitals
+GUI can open uninterrupted videos, but full-timeline CSV handling is pending.
+
+Before transferring a pristine source bundle, run
+`python tools/export_runtime.py --verify build/runtime`. Run its tests using the
+[export verification instructions](DEPENDENCIES.md#runtime-integration-export).
+Do not include local test outputs, caches or build artifacts in the integration.

@@ -1,4 +1,5 @@
 .venv/
+.venv-*/
 .models/
 .metrics-venv/
 __pycache__/
@@ -6,11 +7,28 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 results/
+# Suggested local input/export directories, including their CSV/JSON sidecars.
+/recordings/
+/exports/
+/record_pairs/
 *.mp4
 *.avi
 *.mov
+*.mkv
+*.webm
+*.y4m
+*.yuv
+*.nv12
+# Downloaded weights and derived numerical data.
 *.pt
 *.pth
+*.onnx
+*.npy
+*.npz
+*.mat
+*.h5
 .vscode/
 build/
 dist/
+# Isolated external checkouts used for FaceVitals integration; never vendor them here.
+/worktrees/

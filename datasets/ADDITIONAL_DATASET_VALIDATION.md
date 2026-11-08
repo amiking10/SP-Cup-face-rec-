@@ -4,6 +4,13 @@ This follow-up covers ChokePoint, VPCD and MobiFace. Dataset access and annotati
 semantics determine which experiments can run. No model or tracking threshold was
 tuned using these recordings, and dataset material remains local and ignored.
 
+The measurements below are historical evidence from their recorded revisions;
+the Python 3.12 environment update did not rerun these experiments. Repeat commands
+now use `.venv-shared` and need the full research checkout with
+[benchmark extras](BENCHMARK_GUIDE.md#install-on-windows). Exact reproduction also
+requires the original revision, environment and registered inputs from each run.
+These dataset adapters and results are excluded from the runtime integration bundle.
+
 ## ChokePoint: real eye-point tests
 
 The [official project](https://arma.sourceforge.net/chokepoint/) links the
@@ -39,14 +46,14 @@ and missing sampled-frame counts are recorded. Failed runs are marked as failed.
 ### Download and repeat on Windows
 
 ```powershell
-.\.venv\Scripts\python.exe datasets/scripts/download_c3_datasets.py chokepoint --files groundtruth.tar.xz P1E_S1.tar.xz README.txt
+.\.venv-shared\Scripts\python.exe datasets/scripts/download_c3_datasets.py chokepoint --files groundtruth.tar.xz P1E_S1.tar.xz README.txt
 $chokeRoot = "datasets/data/raw/chokepoint"
 tar -xJf "$chokeRoot/groundtruth.tar.xz" -C "$chokeRoot"
 tar -xJf "$chokeRoot/P1E_S1.tar.xz" -C "$chokeRoot"
 foreach ($cameraNumber in 1,2,3) {
     $sequenceName = "P1E_S1_C$cameraNumber"
     tar -xJf "$chokeRoot/$sequenceName.tar.xz" -C "$chokeRoot"
-    .\.venv\Scripts\python.exe -m c3_tracker.benchmark.chokepoint --images "$chokeRoot/$sequenceName" --annotations "$chokeRoot/groundtruth/$sequenceName.xml" --output "results/chokepoint_repeat/$sequenceName" --start-frame 0 --end-frame 900 --matrix --annotate-video
+    .\.venv-shared\Scripts\python.exe -m c3_tracker.benchmark.chokepoint --images "$chokeRoot/$sequenceName" --annotations "$chokeRoot/groundtruth/$sequenceName.xml" --output "results/chokepoint_repeat/$sequenceName" --start-frame 0 --end-frame 900 --matrix --annotate-video
     if ($LASTEXITCODE -ne 0) { throw "ChokePoint test failed: $sequenceName" }
 }
 ```
@@ -157,7 +164,7 @@ for camera in (1, 2, 3):
                               output/name, replace(config, fps=fps),
                               start=0, end=4410, overlay=True)
         print(result, flush=True)
-'@ | .\.venv\Scripts\python.exe -
+'@ | .\.venv-shared\Scripts\python.exe -
 ```
 
 At the time of this public-only extension, VPCD and MobiFace remained unscored with

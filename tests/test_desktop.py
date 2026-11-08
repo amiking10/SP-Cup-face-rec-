@@ -3,6 +3,7 @@ import csv
 import json
 import cv2
 import numpy as np
+import pytest
 from c3_tracker.app import main
 from c3_tracker.controls import Controls, SAVE_BUTTON
 from c3_tracker.target_manager import TargetManager
@@ -56,7 +57,12 @@ def test_clean_overlay_hides_unobserved_and_unconfirmed_boxes():
     assert debug[120:201, 120:181].any()
 
 
-def test_desktop_loop_saves_and_protects_target_selection(tmp_path, monkeypatch):
+@pytest.mark.parametrize('options,expected_roi', [
+    ([], [220, 104, 280, 200]),
+    (['--roi-top', '0.125', '--roi-bottom=-0.25', '--roi-left', '0.1', '--roi-right=-0.1'],
+     [214, 92, 274, 176]),
+])
+def test_desktop_loop_saves_and_protects_target_selection(tmp_path, monkeypatch, options, expected_roi):
     from c3_tracker import app
     image = np.full((300, 640, 3), 100, dtype=np.uint8)
 
@@ -119,7 +125,7 @@ def test_desktop_loop_saves_and_protects_target_selection(tmp_path, monkeypatch)
     monkeypatch.setattr(cv2, 'waitKey', wait_key)
     monkeypatch.setattr(cv2, 'getWindowProperty', lambda *args: 1)
     monkeypatch.setattr(cv2, 'destroyAllWindows', lambda: None)
-    assert main(['--source', 'webcam', '--output-dir', str(tmp_path)]) == 0
+    assert main(['--source', 'webcam', '--output-dir', str(tmp_path), *options]) == 0
     run, = tmp_path.iterdir()
     shots = sorted(run.glob('screenshot_*.png'))
     assert len(shots) == 3
@@ -130,6 +136,17 @@ def test_desktop_loop_saves_and_protects_target_selection(tmp_path, monkeypatch)
         rows = list(csv.DictReader(f))
     assert len(rows) == 12
     assert all(row['has_detection'] == '0' for row in rows if row['track_id'] == '7')
+    roi_rows = [row for row in rows if row['capture_roi_top']]
+    assert len(roi_rows) == 1
+    roi_row, = roi_rows
+    assert roi_row['frame_index'] == '3' and roi_row['track_id'] == '8'
+    assert [int(roi_row[key]) for key in ('capture_roi_left', 'capture_roi_top',
+                                         'capture_roi_right', 'capture_roi_bottom')] == expected_roi
+    assert roi_row['top'] == '120'  # Original tracking/evaluation geometry is preserved.
+    left, top, right, bottom = expected_roi
+    assert tuple(displayed[3][top, (left + right) // 2]) == (0, 220, 0)
+    assert not np.all(displayed[3] == (255, 255, 0), axis=2).any()
+    assert np.all(image == 100)  # Capture/overlays never modify the source image.
     assert protected == ['8', None]
     assert json.loads((run / 'summary.json').read_text())['error'] is None
     assert capture.released

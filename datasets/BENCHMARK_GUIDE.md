@@ -7,14 +7,21 @@ An optional oracle experiment supplies ground-truth **boxes, never identities**,
 is reported separately. Synthetic tests establish infrastructure behavior, not real
 face-tracking performance.
 
+These commands require the full FaceRec research checkout. Dataset adapters,
+evaluation commands and benchmark extras are excluded from the
+[runtime integration bundle](../docs/DEPENDENCIES.md#runtime-integration-export).
+Current setup uses Python 3.12; historical dataset reports retain their recorded
+revisions and environments. Updating the environment does not reproduce or replace
+their results. For current regression checks see [validation](../docs/VALIDATION.md).
+
 ## Install on Windows
 
-From the repository root in PowerShell, using the existing Python 3.11 environment:
+From the repository root in PowerShell, using the Python 3.12 shared environment:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install -e ".[test,benchmark]"
-.\.venv\Scripts\python.exe -m c3_tracker.models --download
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --help
+.\.venv-shared\Scripts\python.exe -m pip install -e ".[test,benchmark]"
+.\.venv-shared\Scripts\python.exe -m c3_tracker.models --download
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --help
 ```
 
 The benchmark extra pins motmetrics 1.4.0 and pandas 2.2.3. The tracker keeps its
@@ -22,13 +29,15 @@ NumPy 1.26.4 pin. For optional reference HOTA, use a separate environment becaus
 TrackEval 1.3.0 requires NumPy 2 on Python 3.11:
 
 ```powershell
-.\.venv\Scripts\python.exe -m venv .metrics-venv
+py -3.11 -m venv .metrics-venv
 .\.metrics-venv\Scripts\python.exe -m pip install -r datasets/requirements-hota.txt
 ```
 
 Pass `--hota-python .metrics-venv\Scripts\python.exe` when running a benchmark.
 Without it HOTA is null with an explicit reason. TrackEval receives only post-inference
 metric inputs in a local subprocess; its dependencies never replace the tracker stack.
+This optional metrics environment is not needed for the desktop tracker, paired
+video export or the manual FaceVitals handoff.
 
 ## Dataset support and required files
 
@@ -79,7 +88,7 @@ stronger claims are not established. Empty frames must be explicit, not inferred
 from missing annotation rows. Then run:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset common --manifest datasets/data/processed/common/manifest.json --output results/common_baseline
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset common --manifest datasets/data/processed/common/manifest.json --output results/common_baseline
 ```
 
 ## Local layout and AVA download
@@ -152,7 +161,7 @@ has up to 10 ms jitter relative to the verified 25 FPS video. This explicit tole
 was checked to map 1,020 boxes onto 250 unique source frames, with no entity/frame collisions:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate prepare --manifest "$avaRoot/manifest.json" --output "datasets/data/processed/ava_active_speaker" --alignment-tolerance 0.0101
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate prepare --manifest "$avaRoot/manifest.json" --output "datasets/data/processed/ava_active_speaker" --alignment-tolerance 0.0101
 ```
 
 The adapter rejects out-of-range timestamps, excessive alignment error, conflicting
@@ -168,7 +177,7 @@ alignment metadata. If deliberate resampling is needed, this optional video-only
 records every nearest-source-frame mapping and original/output hashes:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate prepare-video --input "$avaRoot/videos/053oq2xB3oU.mkv" --output "$avaRoot/videos/clip_30fps.mp4" --start-seconds 900 --duration 10 --fps 30
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate prepare-video --input "$avaRoot/videos/053oq2xB3oU.mkv" --output "$avaRoot/videos/clip_30fps.mp4" --start-seconds 900 --duration 10 --fps 30
 ```
 
 This does **not** make mismatched annotations magically valid. It changes the inference
@@ -180,7 +189,7 @@ the benchmark's video-aligned common format.
 If metadata inspection alone is needed, keep its output separate from prepared video GT:
 
 ```powershell
-.\.venv\Scripts\python.exe datasets/scripts/prepare_ava_annotations.py --input datasets/data/raw/ava_active_speaker/annotations --output datasets/data/processed/ava_metadata
+.\.venv-shared\Scripts\python.exe datasets/scripts/prepare_ava_annotations.py --input datasets/data/raw/ava_active_speaker/annotations --output datasets/data/processed/ava_metadata
 ```
 
 Do not pass `ava_metadata` to the benchmark as video-aligned annotations.
@@ -188,7 +197,7 @@ Do not pass `ava_metadata` to the benchmark as video-aligned annotations.
 ## Run the complete existing baseline
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --output results/ava_baseline --annotate-video
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --output results/ava_baseline --annotate-video
 ```
 
 The default is the current MediaPipe + aligned SFace + DeepSORT stack, including its
@@ -205,7 +214,7 @@ are recorded. Outputs must use a fresh/empty directory; previous results are nev
 Run the same registered sequences at each requested operating condition:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --output results/ava_conditions --matrix
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --output results/ava_conditions --matrix
 ```
 
 This creates six experiments: original resolution, 640x480 and 320x240, each at native
@@ -232,8 +241,8 @@ existing MobileNet crop embedder, which consumes the supplied boxes without a fa
 Use the **same MobileNet backend for both runs** when isolating the detector's contribution:
 
 ```powershell
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --appearance-model mobilenet --output results/ava_mobilenet_end_to_end
-.\.venv\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --appearance-model mobilenet --experiment oracle --output results/ava_mobilenet_oracle --annotate-video
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --appearance-model mobilenet --output results/ava_mobilenet_end_to_end
+.\.venv-shared\Scripts\python.exe -m c3_tracker.evaluate --dataset ava --data-root datasets/data --appearance-model mobilenet --experiment oracle --output results/ava_mobilenet_oracle --annotate-video
 ```
 
 Oracle inference accepts boxes only (confidence 1.0, constant face class); no annotation
@@ -366,10 +375,10 @@ unmatched predictions and evaluability rather than hiding failures.
 ## Validation and extension
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest -q tests datasets/tests
+.\.venv-shared\Scripts\python.exe -m pytest -q tests datasets/tests
 $env:C3_RUN_MODEL_TESTS = "1"
 $env:C3_HOTA_PYTHON = (Resolve-Path ".metrics-venv/Scripts/python.exe").Path
-.\.venv\Scripts\python.exe -m pytest -q tests datasets/tests
+.\.venv-shared\Scripts\python.exe -m pytest -q tests datasets/tests
 Remove-Item Env:\C3_RUN_MODEL_TESTS, Env:\C3_HOTA_PYTHON
 ```
 
@@ -415,3 +424,33 @@ datasets or visualization. Optionally implement `runtime_info()` with actual dev
 provenance. For oracle mode consume the supplied boxes only and never infer identity from
 their list positions or labels. Preserve the common prediction semantics and test the
 same synthetic infrastructure before comparing algorithms on identical registered splits.
+
+## Designated-target paired export adapters
+
+These adapters support the FaceVitals composite experiments. For the interactive
+desktop workflow, start with the [video-pair quick start](../README.md#export-a-video-pair).
+The desktop recorder produces MP4; the benchmark adapter can produce lossless
+FFV1/MKV files from logged crops.
+
+Record one designated-box selection in `selection.json`: a `frame_index` and
+`bbox: [left, top, right, bottom]` in source pixels. That box is used on its single
+initialization frame only. Future annotations are never supplied for association
+or crop generation. Failed designation is reported explicitly.
+
+From the repository root, replacing the example input and output paths:
+
+```powershell
+python -m c3_tracker.benchmark.paired_export --source "C:\videos\composite.mkv" --output "results\example\tracking" --subject clip_01 --run-id example --selection-json selection.json --tracking-only
+python -m c3_tracker.benchmark.composite_pair --tracking-export "results\example\tracking\export.json" --output "results\example\paired" --start-frame 30
+```
+
+`--tracking-only` saves tracking and capture-ROI logs without encoding the desktop
+MP4 pair. The second command exports synchronized clean/full and face-centered
+FFV1/MKV videos, comparing every decoded pixel with its intended output frame.
+Use the start frame recorded by the benchmark protocol; frame 30 is the existing
+30 FPS composite workflow's one-second warmup, not a universal selection rule.
+
+Retain `paired_recording.json` and `frame_validity.csv` with the videos. A downstream
+pulse consumer must honor invalid frames and source-time mapping. See the
+[FaceVitals handoff status](../README.md#facevitals-handoff) before selecting a
+consumer; upstream GUI support differs from the local integration branch.

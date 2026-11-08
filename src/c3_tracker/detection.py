@@ -1,4 +1,4 @@
-"""MediaPipe legacy face detection adapter (pinned to 0.10.21)."""
+"""MediaPipe legacy face detection adapter (pinned to 0.10.14)."""
 from dataclasses import dataclass
 import math
 
@@ -37,7 +37,7 @@ class FaceDetector:
                 model_selection=model_selection, min_detection_confidence=confidence)
         except Exception as exc:
             raise RuntimeError("MediaPipe model loading failed. Install pinned dependencies; "
-                               "this baseline requires mediapipe==0.10.21.") from exc
+                               "this baseline requires mediapipe==0.10.14.") from exc
 
     def detect(self, frame):
         import cv2
